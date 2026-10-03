@@ -62,16 +62,17 @@ async function doAuth(){
   $('btn-auth').disabled = true;
   try {
     if (mode === 'signup') {
-      const username = $('auth-username').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      const display_name = $('auth-displayname').value.trim() || username;
-      if (username.length < 3) throw new Error('Pick a username (3+ letters/numbers).');
+      const rawName = $('auth-name').value.trim();
+      const username = rawName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const display_name = rawName;
+      if (username.length < 3) throw new Error('Pick a name (3+ letters/numbers).');
       const { data, error } = await sb.auth.signUp({ email, password: pw });
       if (error) throw error;
       const user = data.user;
       if (!data.session) { $('auth-error').textContent = 'Check your email to confirm, then sign in.'; return; }
       const { error: pErr } = await sb.from('blip_profiles').insert({ id: user.id, username, display_name });
       if (pErr) {
-        if (pErr.code === '23505') throw new Error('That username is taken.');
+        if (pErr.code === '23505') throw new Error('That name is taken.');
         throw pErr;
       }
       await enterApp(user);
@@ -497,8 +498,18 @@ function wireModals(){
       box.appendChild(r);
     });
   };
-  $('btn-me').onclick = () => { $('me-username').textContent = '@' + me.username; $('me-email').textContent = me.email; show('modal-me'); };
+  $('btn-me').onclick = () => { $('me-name').value = me.display_name; $('me-email').textContent = me.email; $('me-error').textContent = ''; show('modal-me'); };
   $('btn-me-close').onclick = () => hide('modal-me');
+  $('btn-me-save').onclick = async () => {
+    const raw = $('me-name').value.trim();
+    const username = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (username.length < 3) { $('me-error').textContent = 'Pick a name (3+ letters/numbers).'; return; }
+    const { error } = await sb.from('blip_profiles').update({ username, display_name: raw }).eq('id', me.id);
+    if (error) { $('me-error').textContent = error.code === '23505' ? 'That name is taken.' : error.message; return; }
+    me.username = username; me.display_name = raw;
+    profilesCache[me.id] = { ...profilesCache[me.id], username, display_name: raw };
+    hide('modal-me'); loadChats(); loadStories();
+  };
   $('btn-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
   $('btn-send-cancel').onclick = () => hide('sheet-send');
 }

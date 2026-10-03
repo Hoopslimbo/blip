@@ -24,8 +24,7 @@
     <h1 class="auth-name">Blip</h1>
     <p class="auth-tag">chat &amp; camera with your people</p>
     <div id="auth-signup-fields">
-      <input id="auth-username" class="field" type="text" placeholder="username" autocomplete="username" maxlength="20">
-      <input id="auth-displayname" class="field" type="text" placeholder="display name" maxlength="30">
+      <input id="auth-name" class="field" type="text" placeholder="your name" autocomplete="nickname" maxlength="30">
     </div>
     <input id="auth-email" class="field" type="email" placeholder="email" autocomplete="email">
     <input id="auth-password" class="field" type="password" placeholder="password" autocomplete="current-password">
@@ -117,13 +116,17 @@
   </div>
 </div>
 
-<!-- ============ ME SHEET ============ -->
+<!-- ============ SETTINGS ============ -->
 <div id="modal-me" class="modal hidden">
   <div class="modal-card">
-    <h3 id="me-username"></h3>
+    <h3>Settings</h3>
+    <label class="dim" for="me-name">your name</label>
+    <input id="me-name" class="field" type="text" maxlength="30">
     <p class="dim" id="me-email"></p>
+    <p id="me-error" class="error"></p>
     <div class="modal-actions">
       <button id="btn-me-close" class="btn-link">close</button>
+      <button id="btn-me-save" class="btn-primary">Save</button>
       <button id="btn-signout" class="btn-danger">Sign out</button>
     </div>
   </div>
