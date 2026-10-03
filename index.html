@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Blip</title>
+<meta name="description" content="Blip — chat and camera with your people.">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Blip">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ AUTH ============ -->
+<div id="screen-auth" class="screen">
+  <div class="auth-wrap">
+    <img src="assets/icon-192.png" alt="Blip" class="auth-logo">
+    <h1 class="auth-name">Blip</h1>
+    <p class="auth-tag">chat &amp; camera with your people</p>
+    <div id="auth-signup-fields">
+      <input id="auth-username" class="field" type="text" placeholder="username" autocomplete="username" maxlength="20">
+      <input id="auth-displayname" class="field" type="text" placeholder="display name" maxlength="30">
+    </div>
+    <input id="auth-email" class="field" type="email" placeholder="email" autocomplete="email">
+    <input id="auth-password" class="field" type="password" placeholder="password" autocomplete="current-password">
+    <button id="btn-auth" class="btn-primary">Sign up</button>
+    <button id="btn-auth-toggle" class="btn-link">already have an account? sign in</button>
+    <p id="auth-error" class="error"></p>
+  </div>
+</div>
+
+<!-- ============ MAIN ============ -->
+<div id="screen-main" class="screen hidden">
+  <!-- Chats -->
+  <div id="view-chats" class="view">
+    <header class="topbar">
+      <button id="btn-me" class="logo-btn"><img src="assets/icon-192.png" alt=""><span>Blip</span></button>
+      <button id="btn-add-friend" class="icon-btn" aria-label="Add friend">＋</button>
+    </header>
+    <div id="chat-list" class="chat-list"></div>
+    <div id="chats-empty" class="empty hidden">
+      <p>No chats yet.</p>
+      <p class="dim">Tap ＋ to find your people.</p>
+    </div>
+  </div>
+
+  <!-- Camera -->
+  <div id="view-camera" class="view hidden">
+    <div class="cam-stage">
+      <canvas id="cam-canvas"></canvas>
+      <div id="cam-off" class="cam-off hidden">
+        <p>Camera is off</p>
+        <button id="btn-cam-start" class="btn-primary">Turn on camera</button>
+        <label class="btn-link upload-label">or upload a photo<input id="file-upload" type="file" accept="image/*" hidden></label>
+      </div>
+      <div id="cam-loading" class="cam-loading hidden"><p>Loading face filters…</p></div>
+      <button id="btn-flip" class="cam-flip hidden" aria-label="Flip camera">⇄</button>
+    </div>
+    <div class="filter-bar" id="filter-bar"></div>
+    <div class="cam-controls">
+      <div class="spacer"></div>
+      <button id="btn-shutter" class="shutter" aria-label="Take photo"></button>
+      <div class="spacer"></div>
+    </div>
+  </div>
+
+  <!-- Stories -->
+  <div id="view-stories" class="view hidden">
+    <header class="topbar"><span class="topbar-title">Stories</span></header>
+    <div id="story-tray" class="story-tray"></div>
+    <div id="stories-empty" class="empty hidden">
+      <p>No stories right now.</p>
+      <p class="dim">Snap something on the camera tab and post it.</p>
+    </div>
+  </div>
+
+  <!-- Bottom tabs -->
+  <nav class="tabbar">
+    <button class="tab active" data-view="view-chats">Chats</button>
+    <button class="tab tab-cam" data-view="view-camera">Camera</button>
+    <button class="tab" data-view="view-stories">Stories</button>
+  </nav>
+</div>
+
+<!-- ============ THREAD ============ -->
+<div id="screen-thread" class="screen hidden">
+  <header class="topbar">
+    <button id="btn-thread-back" class="icon-btn" aria-label="Back">‹</button>
+    <span id="thread-name" class="topbar-title"></span>
+    <span class="spacer-w"></span>
+  </header>
+  <div id="thread-messages" class="thread-messages"></div>
+  <form id="thread-form" class="thread-input">
+    <button type="button" id="btn-thread-cam" class="icon-btn" aria-label="Send photo">📷</button>
+    <input id="thread-text" class="field" type="text" placeholder="Message" autocomplete="off" maxlength="500">
+    <button type="submit" class="btn-send">Send</button>
+  </form>
+</div>
+
+<!-- ============ ADD FRIEND ============ -->
+<div id="modal-add" class="modal hidden">
+  <div class="modal-card">
+    <h3>Add friend</h3>
+    <input id="add-username" class="field" type="text" placeholder="their username" maxlength="20">
+    <p id="add-error" class="error"></p>
+    <div id="add-result"></div>
+    <div class="modal-actions">
+      <button id="btn-add-cancel" class="btn-link">cancel</button>
+      <button id="btn-add-search" class="btn-primary">Search</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ME SHEET ============ -->
+<div id="modal-me" class="modal hidden">
+  <div class="modal-card">
+    <h3 id="me-username"></h3>
+    <p class="dim" id="me-email"></p>
+    <div class="modal-actions">
+      <button id="btn-me-close" class="btn-link">close</button>
+      <button id="btn-signout" class="btn-danger">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SEND SHEET (after capture) ============ -->
+<div id="sheet-send" class="modal hidden">
+  <div class="modal-card sheet">
+    <h3>Send to…</h3>
+    <img id="send-preview" class="send-preview" alt="preview">
+    <div id="send-list" class="send-list"></div>
+    <button id="btn-send-story" class="btn-primary btn-block">Post to my story</button>
+    <button id="btn-send-cancel" class="btn-link btn-block">cancel</button>
+  </div>
+</div>
+
+<!-- ============ STORY VIEWER ============ -->
+<div id="screen-story" class="screen hidden">
+  <div id="story-progress" class="story-progress"></div>
+  <header class="story-header">
+    <span id="story-who"></span>
+    <button id="btn-story-close" class="icon-btn light" aria-label="Close">✕</button>
+  </header>
+  <img id="story-img" alt="story">
+  <div id="story-tap-left" class="story-tap left"></div>
+  <div id="story-tap-right" class="story-tap right"></div>
+</div>
+
+<input id="hidden-file-cam" type="file" accept="image/*" hidden>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
