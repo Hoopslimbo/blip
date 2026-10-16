@@ -1,162 +1,1837 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Blip</title>
-<meta name="description" content="Blip — chat and camera with your people.">
-<meta name="theme-color" content="#000000">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Blip — Chat & Camera with Your People.">
+<meta name="theme-color" content="#1e90ff">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Blip">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="assets/favicon.png">
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css">
+<meta name="application-name" content="Blip">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/comet.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
+<link rel="manifest" href="assets/manifest.webmanifest">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --yellow:#1e90ff;
+  --ink:#0f1014;
+  --ink2:#656d78;
+  --ink3:#9aa3ae;
+  --line:#ececf0;
+  --bg:#ffffff;
+  --sheet:#ffffff;
+  --soft:#f4f4f7;
+  --photo:#1e90ff;
+  --chat:#0fadff;
+  --story:#8329c9;
+  --danger:#e72b4e;
+  --shadow:0 10px 34px rgba(15,16,20,.16);
+  --ease:cubic-bezier(.22,.9,.32,1);
+  --tabbar-h:calc(60px + env(safe-area-inset-bottom));
+  --head-h:calc(56px + env(safe-area-inset-top));
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:#e9e9ee;color:var(--ink);
+  font-family:"Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none;
+}
+button{font:inherit;border:0;background:none;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;border:0;background:none;color:inherit}
+img{display:block}
+.hidden{display:none!important}
+
+/* ---------- stage ---------- */
+#stage{position:relative;width:100%;max-width:430px;height:100dvh;margin:0 auto;background:var(--bg);overflow:hidden}
+@media(min-width:480px){
+  body{display:flex;align-items:center;justify-content:center}
+  #stage{height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
+}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+.screen.over{animation:slideIn .26s var(--ease)}
+@keyframes slideIn{from{transform:translateX(48px);opacity:.4}to{transform:none;opacity:1}}
+
+/* ---------- avatar ---------- */
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex:none;user-select:none;line-height:1}
+.avatar.sm{width:44px;height:44px;font-size:19px}
+.avatar.md{width:52px;height:52px;font-size:22px}
+.avatar.lg{width:104px;height:104px;font-size:46px}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+/* ---------- splash ---------- */
+#screen-splash{background:var(--yellow);align-items:center;justify-content:center;z-index:90}
+#screen-splash img{width:118px;height:118px}
+.mini-avatar{width:32px;height:32px;font-size:14px;cursor:pointer}
+
+/* ---------- auth ---------- */
+#screen-auth{background:var(--yellow);align-items:center;justify-content:center;padding:28px 26px;overflow:auto}
+.auth-card{display:flex;flex-direction:column;align-items:center;width:100%;max-width:330px;text-align:center}
+.auth-logo{width:118px;height:118px}
+.auth-name{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:10px 0 26px}
+.auth-card form{width:100%;display:flex;flex-direction:column;align-items:stretch}
+.field{
+  width:100%;background:rgba(255,255,255,.92);border-radius:999px;padding:14px 20px;
+  font-size:16px;margin-bottom:11px;outline:none;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.06);
+}
+.field::placeholder{color:#9aa3ae}
+.field:focus{box-shadow:inset 0 0 0 2px var(--ink)}
+.btn-yellow{
+  background:var(--ink);color:#fff;border-radius:999px;padding:15px;font-weight:800;font-size:16px;
+  margin-top:4px;transition:transform .1s,opacity .15s;
+}
+.btn-yellow:active{transform:scale(.97)}
+.btn-yellow:disabled{opacity:.5}
+.btn-toggle{margin-top:14px;font-weight:700;font-size:14px;color:rgba(15,16,20,.75);padding:6px}
+.error{min-height:20px;color:#d61c3f;font-size:13.5px;font-weight:600;margin:10px 2px 0}
+
+/* ---------- header ---------- */
+.app-head{
+  height:var(--head-h);padding-top:env(safe-area-inset-top);
+  display:flex;align-items:center;gap:10px;padding-left:12px;padding-right:12px;
+  background:var(--bg);border-bottom:1px solid var(--line);flex:none;z-index:5;
+}
+.app-head .title{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:21px;font-weight:800;letter-spacing:-.01em}
+.title-logo{width:27px;height:27px;border-radius:8px;flex:none}
+.head-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:none;transition:background .15s}
+.head-btn:active{background:var(--soft)}
+.head-btn svg{width:24px;height:24px}
+
+/* ---------- content areas ---------- */
+.viewpane{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.viewpane::-webkit-scrollbar{display:none}
+.camera-pane{flex:1;position:relative;background:#000;overflow:hidden}
+
+/* ---------- chat list ---------- */
+.chat-row{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;position:relative;transition:background .12s}
+.chat-row:active{background:var(--soft)}
+.chat-row + .chat-row::before{content:"";position:absolute;top:0;left:72px;right:0;height:1px;background:var(--line)}
+.row-main{flex:1;min-width:0}
+.row-name{font-size:16.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-name.unread{font-weight:800}
+.row-status{display:flex;align-items:center;gap:6px;font-size:13.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-status .dot{width:9px;height:9px;border-radius:2.5px;flex:none}
+.row-status .sep{color:var(--ink3)}
+.st-photo{color:var(--photo);font-weight:700}
+.st-chat{color:var(--chat);font-weight:700}
+.st-plain{color:var(--ink2)}
+.st-dim{color:var(--ink3)}
+.unread-dot{width:11px;height:11px;border-radius:50%;background:var(--photo);flex:none}
+.empty{padding:60px 30px;text-align:center}
+.empty .big{font-size:17px;font-weight:700;margin:0 0 6px}
+.empty .dim{color:var(--ink2);font-size:14.5px;margin:0;line-height:1.45}
+
+/* ---------- stories ---------- */
+.sec-label{font-size:15px;font-weight:800;padding:18px 16px 10px}
+.story-strip{display:flex;gap:16px;padding:2px 16px 14px;overflow-x:auto}
+.story-strip::-webkit-scrollbar{display:none}
+.story-chip{display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;flex:none;cursor:pointer}
+.story-chip .ring{width:64px;height:64px;border-radius:50%;padding:3px}
+.story-chip .ring.purple{background:conic-gradient(from 210deg,#8329c9,#c65df0,#8329c9)}
+.story-chip .ring.yellow{background:var(--yellow)}
+.story-chip .ring-inner{background:#fff;border-radius:50%;padding:2.5px;width:100%;height:100%}
+.story-chip .avatar{width:100%;height:100%;font-size:24px}
+.story-chip span{font-size:12px;font-weight:600;color:var(--ink);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.story-chip .plus{position:absolute;right:-1px;bottom:-1px;width:20px;height:20px;border-radius:50%;background:var(--chat);color:#fff;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center}
+.story-chip .plus svg{width:11px;height:11px}
+.ring-wrap{position:relative}
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:2px 16px 20px}
+.story-card{border-radius:16px;overflow:hidden;position:relative;aspect-ratio:3/4.1;background:#222;cursor:pointer;text-align:left;width:100%}
+.story-card img.ph{width:100%;height:100%;object-fit:cover}
+.story-card .sc-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.34),transparent 42%,transparent 62%,rgba(0,0,0,.5))}
+.story-card .sc-who{position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:7px;color:#fff}
+.story-card .sc-who .avatar{width:30px;height:30px;font-size:13px;border:2px solid rgba(255,255,255,.85)}
+.story-card .sc-who b{font-size:13.5px;text-shadow:0 1px 4px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.story-card .sc-when{position:absolute;bottom:10px;left:12px;color:#fff;font-size:12.5px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.55)}
+.story-card .sc-count{position:absolute;bottom:10px;right:12px;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.4);border-radius:999px;padding:2px 8px}
+.friends-head{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 0}
+.friends-head .sec-label{padding:14px 0 8px}
+
+/* ---------- friends ---------- */
+#screen-friends{z-index:30}
+#screen-user{z-index:36}
+.btn-mini{border-radius:999px;padding:8px 16px;font-weight:800;font-size:13.5px;background:var(--yellow);color:#fff;flex:none;transition:transform .1s}
+.btn-mini:active{transform:scale(.94)}
+.btn-mini.added{background:var(--soft);color:var(--ink2)}
+.btn-mini.remove{background:var(--soft);color:var(--danger)}
+.profile-bio{color:var(--ink2);font-size:15px;line-height:1.45;text-align:center;margin-top:10px;max-width:300px;white-space:pre-wrap;word-break:break-word}
+.vp-actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:28px}
+
+/* ---------- bottom nav ---------- */
+#tabbar{
+  height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
+  display:flex;align-items:flex-start;background:#fff;border-top:1px solid var(--line);flex:none;z-index:6;
+}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:8px;color:#8b939e;font-size:10.5px;font-weight:700}
+.tab svg{width:25px;height:25px}
+.tab.active{color:var(--yellow)}
+.tab-cam-btn{
+  width:58px;height:58px;border-radius:50%;background:var(--yellow);
+  display:flex;align-items:center;justify-content:center;margin-top:-16px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);border:3px solid #fff;color:#000;transition:transform .12s;
+}
+.tab-cam-btn:active{transform:scale(.93)}
+.tab-cam-btn svg{width:28px;height:28px}
+.tab-cam-wrap{flex:1;display:flex;flex-direction:column;align-items:center}
+
+/* ---------- camera ---------- */
+#cam-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
+.cam-top{position:absolute;top:0;left:0;right:0;padding-top:env(safe-area-inset-top);display:flex;justify-content:space-between;padding-left:14px;padding-right:14px;z-index:4}
+.cam-top .col{display:flex;flex-direction:column;gap:12px;align-items:center}
+.cam-ctl{width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.38);color:#fff;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);transition:background .15s,transform .1s}
+.cam-ctl:active{transform:scale(.92)}
+.cam-ctl svg{width:23px;height:23px}
+.cam-ctl.on{background:var(--yellow);color:#000}
+.cam-mini{width:34px;height:34px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.9)}
+.cam-bottom{position:absolute;left:0;right:0;bottom:0;padding:0 18px calc(16px + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;gap:14px}
+.cam-actions{display:flex;align-items:center;justify-content:space-between}
+.cam-side{width:52px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#fff;font-size:11px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.cam-side .cam-ctl{width:48px;height:48px}
+.cam-side svg{width:24px;height:24px}
+.shutter{width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:transparent;position:relative;transition:transform .1s}
+.shutter::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#fff;transition:transform .1s,background .15s}
+.shutter:active{transform:scale(.94)}
+.shutter:active::after{background:var(--yellow)}
+.cam-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;text-align:center;padding:30px;z-index:3;background:rgba(0,0,0,.25)}
+.cam-msg p{margin:0;font-size:16px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.btn-white{background:#fff;color:#000;border-radius:999px;padding:13px 26px;font-weight:800;font-size:15px}
+.btn-ghost-w{color:#fff;font-weight:700;font-size:14.5px;padding:8px;text-shadow:0 1px 5px rgba(0,0,0,.7)}
+.flash-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5}
+
+/* ---------- placeholder pane (map) ---------- */
+.ph-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 34px;text-align:center}
+.ph-ico{width:82px;height:82px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;color:#000}
+.ph-ico svg{width:40px;height:40px}
+.ph-wrap h2{margin:6px 0 0;font-size:21px;font-weight:800}
+.ph-wrap p{margin:0;color:var(--ink2);font-size:14.5px;line-height:1.5;max-width:270px}
+
+/* ---------- thread ---------- */
+#screen-thread{z-index:20}
+.thread-head{height:var(--head-h);padding-top:env(safe-area-inset-top);display:flex;align-items:center;gap:6px;padding-left:6px;padding-right:12px;background:var(--bg);border-bottom:1px solid var(--line);flex:none}
+.thread-head .who{flex:1;display:flex;align-items:center;gap:10px;min-width:0;padding:4px 2px;border-radius:12px;text-align:left}
+.thread-head .who .avatar{width:38px;height:38px;font-size:16px}
+.thread-head .who b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thread-head .who small{display:block;font-size:12.5px;color:var(--ink2);font-weight:500}
+#thread-messages{flex:1;overflow-y:auto;padding:16px 14px 10px;display:flex;flex-direction:column;gap:3px}
+#thread-messages::-webkit-scrollbar{display:none}
+.day-sep{align-self:center;color:var(--ink3);font-size:12px;font-weight:600;margin:10px 0 8px}
+.bubble-row{display:flex;flex-direction:column;max-width:76%}
+.bubble-row.me{align-self:flex-end;align-items:flex-end}
+.bubble-row.them{align-self:flex-start;align-items:flex-start}
+.bubble{padding:9px 13px;font-size:15.5px;line-height:1.35;border-radius:20px;word-break:break-word;white-space:pre-wrap}
+.bubble-row.me .bubble{background:var(--chat);color:#fff;border-bottom-right-radius:5px}
+.bubble-row.them .bubble{background:var(--soft);color:var(--ink);border-bottom-left-radius:5px}
+.bubble-row + .bubble-row{margin-top:2px}
+.bubble-row.gap{margin-top:12px}
+.btime{font-size:11px;color:var(--ink3);margin:3px 4px 0;font-weight:500}
+.photo-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:16px;background:var(--soft);cursor:pointer;min-width:190px}
+.bubble-row.me .photo-card{background:rgba(11,173,255,.14)}
+.photo-ico{width:42px;height:42px;border-radius:11px;background:var(--photo);display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.photo-ico svg{width:22px;height:22px}
+.photo-card b{font-size:14.5px;display:block}
+.photo-card small{font-size:12.5px;color:var(--ink2);font-weight:600}
+.photo-card.seen .photo-ico{background:#fff;color:var(--photo);box-shadow:inset 0 0 0 2px var(--photo)}
+.thread-input{flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
+.thread-input .pill{flex:1;display:flex;align-items:center;background:var(--soft);border-radius:999px;padding:4px 6px 4px 16px;gap:6px}
+.thread-input input{flex:1;font-size:16px;padding:8px 0;outline:none;min-width:0}
+.thread-input input::placeholder{color:var(--ink3)}
+.send-btn{width:38px;height:38px;border-radius:50%;background:var(--chat);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .1s,opacity .15s}
+.send-btn:active{transform:scale(.9)}
+.send-btn:disabled{opacity:.35}
+.cam-mini-btn{width:42px;height:42px;border-radius:50%;background:var(--soft);color:var(--ink);display:flex;align-items:center;justify-content:center;flex:none}
+.cam-mini-btn svg{width:22px;height:22px}
+
+/* ---------- overlays / sheets ---------- */
+.overlay{position:absolute;inset:0;z-index:40;background:rgba(10,10,14,.45);display:flex;align-items:flex-end;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sheet{background:var(--sheet);width:100%;border-radius:22px 22px 0 0;padding:14px 18px calc(18px + env(safe-area-inset-bottom));animation:sheetUp .3s var(--ease);max-height:88%;display:flex;flex-direction:column}
+@keyframes sheetUp{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
+.sheet .grab{width:38px;height:5px;border-radius:99px;background:#dcdce2;margin:0 auto 12px;flex:none}
+.sheet h3{margin:2px 0 12px;font-size:19px;font-weight:800;text-align:center}
+.sheet .scroll{overflow-y:auto}
+.sheet .scroll::-webkit-scrollbar{display:none}
+.field-soft{background:var(--soft);border-radius:14px;padding:13px 16px;width:100%;font-size:16px;outline:none}
+.field-soft::placeholder{color:var(--ink3)}
+.btn-block{width:100%;border-radius:999px;padding:14px;font-weight:800;font-size:15.5px;text-align:center;transition:transform .1s}
+.btn-block:active{transform:scale(.98)}
+.btn-ink{background:var(--ink);color:#fff}
+.btn-yellow2{background:var(--yellow);color:#000}
+.btn-ghost{color:var(--ink2);font-weight:700}
+.btn-danger-t{color:var(--danger);font-weight:700}
+.sheet .stack{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.send-preview{width:100%;max-height:300px;object-fit:cover;border-radius:16px;margin-bottom:6px;background:#111}
+.pick-row{display:flex;align-items:center;gap:12px;padding:9px 2px;cursor:pointer;border-radius:12px}
+.pick-row:active{background:var(--soft)}
+.pick-row .row-main b{font-size:16px;display:block}
+.pick-row .row-main span{font-size:13px;color:var(--ink2)}
+.pick-row .go{color:var(--ink3)}
+.pick-row .go svg{width:20px;height:20px}
+
+/* ---------- profile ---------- */
+#screen-profile{z-index:30}
+.profile-scroll{flex:1;overflow-y:auto;padding:26px 22px 30px;display:flex;flex-direction:column;align-items:center}
+.profile-scroll::-webkit-scrollbar{display:none}
+.profile-scroll .avatar.lg{box-shadow:0 0 0 5px var(--yellow)}
+.profile-comet{width:64px;height:64px;border-radius:18px;box-shadow:var(--shadow);margin-bottom:20px}
+.profile-name{font-size:25px;font-weight:800;margin:16px 0 2px;text-align:center}
+.profile-user{color:var(--ink2);font-size:15px;font-weight:600}
+.profile-email{color:var(--ink3);font-size:13.5px;margin-top:4px}
+.set-list{width:100%;margin-top:28px;border-top:1px solid var(--line)}
+.set-row{display:flex;align-items:center;gap:12px;width:100%;padding:16px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px;font-weight:600}
+.set-row .lab{flex:1}
+.set-row svg{width:21px;height:21px;color:var(--ink3)}
+.set-row.danger{color:var(--danger)}
+.set-note{width:100%;color:var(--ink2);font-size:13.5px;line-height:1.5;margin:14px 2px 0}
+
+/* ---------- fullscreen viewers ---------- */
+.fs-view{position:absolute;inset:0;z-index:50;background:#000;display:flex;flex-direction:column}
+.fs-view img.full{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.fs-top{position:relative;z-index:3;padding-top:calc(10px + env(safe-area-inset-top));padding-left:12px;padding-right:12px}
+.segbar{display:flex;gap:5px;margin-bottom:10px}
+.segbar .seg{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.35);overflow:hidden}
+.segbar .seg i{display:block;height:100%;width:0;background:#fff;border-radius:99px}
+.fs-who{display:flex;align-items:center;gap:9px;color:#fff}
+.fs-who .avatar{width:34px;height:34px;font-size:14px;border:1.5px solid rgba(255,255,255,.8)}
+.fs-who b{font-size:15px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.fs-who span{font-size:12.5px;color:rgba(255,255,255,.75)}
+.fs-who .sp{flex:1}
+.fs-x{width:34px;height:34px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center}
+.fs-x svg{width:22px;height:22px}
+.fs-bottom{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 16px calc(18px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center}
+.reply-pill{flex:1;background:rgba(0,0,0,.45);border:1.5px solid rgba(255,255,255,.75);border-radius:999px;color:#fff;padding:12px 18px;font-size:14.5px;font-weight:600;text-align:left;backdrop-filter:blur(4px)}
+.fs-act{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.45);border:1.5px solid rgba(255,255,255,.75);color:#fff;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.fs-act svg{width:21px;height:21px}
+.tapzone{position:absolute;top:0;bottom:0;width:38%;z-index:2}
+.tapzone.l{left:0}.tapzone.r{right:0}
+
+/* ---------- call ---------- */
+.call-view{position:absolute;inset:0;z-index:70;background:#101318;display:flex;flex-direction:column;color:#fff;overflow:hidden}
+.call-remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#101318}
+.call-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.5),transparent 32%,transparent 60%,rgba(0,0,0,.6));pointer-events:none}
+.call-local{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:96px;height:136px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.7);z-index:3;background:#222}
+.call-info{position:relative;z-index:2;margin-top:calc(58px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;padding:0 24px}
+.call-info .avatar{animation:callPulse 1.6s ease-in-out infinite}
+@keyframes callPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.call-name{font-size:26px;font-weight:800;text-shadow:0 1px 6px rgba(0,0,0,.55)}
+.call-status{font-size:15.5px;color:rgba(255,255,255,.88);font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.call-controls{position:relative;z-index:2;margin-top:auto;display:flex;justify-content:center;align-items:flex-start;gap:30px;padding:0 20px calc(30px + env(safe-area-inset-bottom))}
+.call-ctl{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.call-ctl .cc{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:background .15s,color .15s}
+.call-ctl .cc svg{width:26px;height:26px}
+.call-ctl.off .cc{background:#fff;color:#000}
+.call-ctl .cc.end,.call-ctl .cc.decline{background:var(--danger);color:#fff}
+.call-ctl .cc.accept{background:#00b578;color:#fff}
+.call-ctl:active .cc{transform:scale(.93)}
+
+/* ---------- toast ---------- */
+#toast{position:absolute;left:50%;bottom:calc(var(--tabbar-h) + 18px);transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:86%;text-align:center;box-shadow:var(--shadow)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
 </head>
 <body>
+<div id="stage">
 
-<!-- ============ AUTH ============ -->
-<div id="screen-auth" class="screen">
-  <div class="auth-wrap">
-    <img src="assets/icon-192.png" alt="Blip" class="auth-logo">
-    <h1 class="auth-name">Blip</h1>
-    <p class="auth-tag">chat &amp; camera with your people</p>
-    <div id="auth-signup-fields">
-      <input id="auth-name" class="field" type="text" placeholder="your name" autocomplete="nickname" maxlength="30">
-    </div>
-    <input id="auth-email" class="field" type="email" placeholder="email" autocomplete="email">
-    <input id="auth-password" class="field" type="password" placeholder="password" autocomplete="current-password">
-    <button id="btn-auth" class="btn-primary">Sign up</button>
-    <button id="btn-auth-toggle" class="btn-link">already have an account? sign in</button>
-    <p id="auth-error" class="error"></p>
+  <!-- ============ SPLASH ============ -->
+  <div id="screen-splash" class="screen">
+    <img src="assets/comet-clear.png" alt="Blip">
   </div>
-</div>
 
-<!-- ============ MAIN ============ -->
-<div id="screen-main" class="screen hidden">
-  <!-- Chats -->
-  <div id="view-chats" class="view">
-    <header class="topbar">
-      <button id="btn-me" class="logo-btn"><img src="assets/icon-192.png" alt=""><span>Blip</span></button>
-      <button id="btn-add-friend" class="icon-btn" aria-label="Add friend">＋</button>
-    </header>
-    <div id="chat-list" class="chat-list"></div>
-    <div id="chats-empty" class="empty hidden">
-      <p>No chats yet.</p>
-      <p class="dim">Tap ＋ to find your people.</p>
+  <!-- ============ AUTH ============ -->
+  <div id="screen-auth" class="screen hidden">
+    <div class="auth-card">
+      <img class="auth-logo" src="assets/comet-clear.png" alt="Blip comet logo">
+      <h1 class="auth-name">Blip</h1>
+      <form id="auth-form" novalidate>
+        <div id="auth-name-wrap">
+          <input id="auth-name" class="field" type="text" placeholder="Your Name" autocomplete="nickname" maxlength="30">
+        </div>
+        <input id="auth-email" class="field" type="email" placeholder="Email" autocomplete="email">
+        <input id="auth-password" class="field" type="password" placeholder="Password" autocomplete="current-password">
+        <button id="btn-auth" class="btn-yellow" type="submit">Sign Up</button>
+      </form>
+      <button id="btn-auth-toggle" class="btn-toggle" type="button">Already have an account? Log In</button>
+      <p id="auth-error" class="error"></p>
     </div>
   </div>
 
-  <!-- Camera -->
-  <div id="view-camera" class="view hidden">
-    <div class="cam-stage">
-      <canvas id="cam-canvas"></canvas>
-      <div id="cam-off" class="cam-off hidden">
-        <p>Camera is off</p>
-        <button id="btn-cam-start" class="btn-primary">Turn on camera</button>
-        <label class="btn-link upload-label">or upload a photo<input id="file-upload" type="file" accept="image/*" hidden></label>
+  <!-- ============ MAIN ============ -->
+  <div id="screen-main" class="screen hidden">
+    <!-- Chats -->
+    <div id="view-chats" class="viewpane-wrap" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <header class="app-head">
+        <span id="head-me-chats"></span>
+        <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Chat</div>
+        <button class="head-btn" id="btn-add-friend" aria-label="Add friend"></button>
+      </header>
+      <div class="viewpane" id="chats-scroll">
+        <div id="chat-list"></div>
+        <div id="chats-empty" class="empty hidden">
+          <p class="big">No Chats Yet</p>
+          <p class="dim">Tap the Add Friend icon up top and search for your people by username.</p>
+        </div>
       </div>
-      <div id="cam-loading" class="cam-loading hidden"><p>Loading face filters…</p></div>
-      <button id="btn-flip" class="cam-flip hidden" aria-label="Flip camera">⇄</button>
     </div>
-    <div class="filter-bar" id="filter-bar"></div>
-    <div class="cam-controls">
-      <div class="spacer"></div>
-      <button id="btn-shutter" class="shutter" aria-label="Take photo"></button>
-      <div class="spacer"></div>
+
+    <!-- Map (placeholder pane) -->
+    <div id="view-map" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <header class="app-head"><span style="width:38px"></span><div class="title"><img class="title-logo" src="assets/comet.png" alt="">Map</div><span style="width:38px"></span></header>
+      <div class="ph-wrap">
+        <div class="ph-ico" data-ico="pin"></div>
+        <h2>The Map Is Coming Soon</h2>
+        <p>Blip doesn't have a map yet. Your chats, camera, and stories all work right now.</p>
+      </div>
+    </div>
+
+    <!-- Camera -->
+    <div id="view-camera" class="camera-pane hidden">
+      <canvas id="cam-canvas"></canvas>
+      <div class="flash-flash" id="flash-flash"></div>
+      <div class="cam-top">
+        <div class="col">
+          <span id="cam-me"></span>
+          <button class="cam-ctl" id="btn-cam-search" aria-label="Search"></button>
+        </div>
+        <div class="col">
+          <button class="cam-ctl" id="btn-flip" aria-label="Flip camera"></button>
+          <button class="cam-ctl" id="btn-flash" aria-label="Toggle flash"></button>
+          <button class="cam-ctl" id="btn-add-cam" aria-label="Add friend"></button>
+        </div>
+      </div>
+      <div id="cam-off" class="cam-msg hidden">
+        <p>Camera Is Off</p>
+        <button id="btn-cam-start" class="btn-white">Turn On Camera</button>
+        <label class="btn-ghost-w">Or Upload a Photo<input id="file-upload" type="file" accept="image/*" hidden></label>
+      </div>
+      <div class="cam-bottom">
+        <div class="cam-actions">
+          <label class="cam-side"><span class="cam-ctl" data-ico="image"></span>Upload<input id="file-upload2" type="file" accept="image/*" hidden></label>
+          <button id="btn-shutter" class="shutter" aria-label="Take photo"></button>
+          <div class="cam-side" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stories -->
+    <div id="view-stories" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <header class="app-head">
+        <span id="head-me-stories"></span>
+        <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Stories</div>
+        <button class="head-btn" id="btn-add-friend2" aria-label="Add friend"></button>
+      </header>
+      <div class="viewpane">
+        <div class="sec-label" style="padding-bottom:8px">My Story</div>
+        <div class="story-strip" id="my-story-strip"></div>
+        <div class="friends-head"><div class="sec-label">Friends</div></div>
+        <div id="story-grid" class="story-grid"></div>
+        <div id="stories-empty" class="empty hidden">
+          <p class="big">No Friend Stories Right Now</p>
+          <p class="dim">When friends post, their stories show up here for 24 hours.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom nav -->
+    <nav id="tabbar">
+      <button class="tab" data-view="view-map"><span data-ico="pin"></span>Map</button>
+      <button class="tab" data-view="view-chats"><span data-ico="chat"></span>Chat</button>
+      <div class="tab-cam-wrap">
+        <button class="tab-cam-btn" id="tab-cam" aria-label="Camera"><span data-ico="camera"></span></button>
+      </div>
+      <button class="tab" data-view="view-stories"><span data-ico="people"></span>Stories</button>
+    </nav>
+  </div>
+
+  <!-- ============ THREAD ============ -->
+  <div id="screen-thread" class="screen over hidden">
+    <header class="thread-head">
+      <button class="head-btn" id="btn-thread-back" aria-label="Back"></button>
+      <button class="who" id="thread-who">
+        <span id="thread-avatar"></span>
+        <span style="min-width:0"><b id="thread-name"></b><small id="thread-user"></small></span>
+      </button>
+      <button class="head-btn" id="btn-thread-video" aria-label="Video"></button>
+      <button class="head-btn" id="btn-thread-call" aria-label="Call"></button>
+    </header>
+    <div id="thread-messages"></div>
+    <form id="thread-form" class="thread-input">
+      <button type="button" class="cam-mini-btn" id="btn-thread-cam" aria-label="Open camera"></button>
+      <div class="pill">
+        <input id="thread-text" type="text" placeholder="Send a chat" autocomplete="off" maxlength="500">
+        <button type="submit" class="send-btn" id="btn-thread-send" aria-label="Send"></button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ============ PROFILE ============ -->
+  <div id="screen-profile" class="screen over hidden">
+    <header class="app-head" style="border-bottom:0">
+      <button class="head-btn" id="btn-profile-back" aria-label="Back"></button>
+      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Profile</div>
+      <span style="width:38px"></span>
+    </header>
+    <div class="profile-scroll">
+      <img class="profile-comet" src="assets/comet.png" alt="Blip comet logo">
+      <span id="profile-avatar"></span>
+      <div class="profile-name" id="profile-name"></div>
+      <div class="profile-user" id="profile-username"></div>
+      <div class="profile-bio hidden" id="profile-bio"></div>
+      <div class="profile-email" id="profile-email"></div>
+      <div class="set-list">
+        <button class="set-row" id="set-photo"><span class="lab">Profile Photo</span><span style="color:var(--ink2);font-weight:500">Change</span><span data-ico="chev"></span></button>
+        <button class="set-row" id="set-bio"><span class="lab">Bio</span><span id="set-bio-val" style="color:var(--ink2);font-weight:500"></span><span data-ico="chev"></span></button>
+        <button class="set-row" id="set-name"><span class="lab">Display Name</span><span id="set-name-val" style="color:var(--ink2);font-weight:500"></span><span data-ico="chev"></span></button>
+        <button class="set-row" id="set-add"><span class="lab">Friends</span><span data-ico="chev"></span></button>
+        <button class="set-row danger" id="btn-signout"><span class="lab">Log Out</span></button>
+      </div>
+      <input id="file-avatar" type="file" accept="image/*" hidden>
+      <p class="set-note">Your display name can be changed one time — after that it's locked. Your username stays the same so friends can still find you.</p>
     </div>
   </div>
 
-  <!-- Stories -->
-  <div id="view-stories" class="view hidden">
-    <header class="topbar"><span class="topbar-title">Stories</span></header>
-    <div id="story-tray" class="story-tray"></div>
-    <div id="stories-empty" class="empty hidden">
-      <p>No stories right now.</p>
-      <p class="dim">Snap something on the camera tab and post it.</p>
+  <!-- ============ SEND SHEET ============ -->
+  <div id="sheet-send" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Send To</h3>
+      <img id="send-preview" class="send-preview" alt="Your photo">
+      <div class="scroll" id="send-list"></div>
+      <div class="stack">
+        <button class="btn-block btn-ink" id="btn-send-story">Post to My Story</button>
+        <button class="btn-block btn-ghost" id="btn-send-cancel">Cancel</button>
+      </div>
     </div>
   </div>
 
-  <!-- Bottom tabs -->
-  <nav class="tabbar">
-    <button class="tab active" data-view="view-chats">Chats</button>
-    <button class="tab tab-cam" data-view="view-camera">Camera</button>
-    <button class="tab" data-view="view-stories">Stories</button>
-  </nav>
-</div>
-
-<!-- ============ THREAD ============ -->
-<div id="screen-thread" class="screen hidden">
-  <header class="topbar">
-    <button id="btn-thread-back" class="icon-btn" aria-label="Back">‹</button>
-    <span id="thread-name" class="topbar-title"></span>
-    <span class="spacer-w"></span>
-  </header>
-  <div id="thread-messages" class="thread-messages"></div>
-  <form id="thread-form" class="thread-input">
-    <button type="button" id="btn-thread-cam" class="icon-btn" aria-label="Send photo">📷</button>
-    <input id="thread-text" class="field" type="text" placeholder="Message" autocomplete="off" maxlength="500">
-    <button type="submit" class="btn-send">Send</button>
-  </form>
-</div>
-
-<!-- ============ ADD FRIEND ============ -->
-<div id="modal-add" class="modal hidden">
-  <div class="modal-card">
-    <h3>Add friend</h3>
-    <input id="add-username" class="field" type="text" placeholder="their username" maxlength="20">
-    <p id="add-error" class="error"></p>
-    <div id="add-result"></div>
-    <div class="modal-actions">
-      <button id="btn-add-cancel" class="btn-link">cancel</button>
-      <button id="btn-add-search" class="btn-primary">Search</button>
+  <!-- ============ FRIENDS ============ -->
+  <div id="screen-friends" class="screen over hidden">
+    <header class="app-head">
+      <button class="head-btn" id="btn-friends-back" aria-label="Back"></button>
+      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Friends</div>
+      <span style="width:38px"></span>
+    </header>
+    <div class="viewpane" style="padding:14px 16px 26px">
+      <input id="friend-search" class="field-soft" type="text" placeholder="Search by username" maxlength="30" autocomplete="off">
+      <p id="friend-error" class="error" style="text-align:left"></p>
+      <div id="friend-results" style="margin-top:4px"></div>
+      <div class="sec-label" style="padding:18px 0 8px">My Friends</div>
+      <div id="friend-list"></div>
+      <div id="friends-empty" class="empty hidden" style="padding:34px 20px">
+        <p class="big">No Friends Yet</p>
+        <p class="dim">Search by username above to find and add your people.</p>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ============ SETTINGS ============ -->
-<div id="modal-me" class="modal hidden">
-  <div class="modal-card">
-    <h3>Settings</h3>
-    <label class="dim" for="me-name">your name</label>
-    <input id="me-name" class="field" type="text" maxlength="30">
-    <p class="dim" id="me-email"></p>
-    <p id="me-error" class="error"></p>
-    <div class="modal-actions">
-      <button id="btn-me-close" class="btn-link">close</button>
-      <button id="btn-me-save" class="btn-primary">Save</button>
-      <button id="btn-signout" class="btn-danger">Sign out</button>
+  <!-- ============ VIEW PROFILE ============ -->
+  <div id="screen-user" class="screen over hidden">
+    <header class="app-head" style="border-bottom:0">
+      <button class="head-btn" id="btn-user-back" aria-label="Back"></button>
+      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Profile</div>
+      <span style="width:38px"></span>
+    </header>
+    <div class="profile-scroll">
+      <span id="user-avatar"></span>
+      <div class="profile-name" id="user-name"></div>
+      <div class="profile-user" id="user-username"></div>
+      <div class="profile-bio hidden" id="user-bio"></div>
+      <div class="vp-actions">
+        <button class="btn-block btn-ink" id="btn-user-message">Message</button>
+        <button class="btn-block btn-yellow2" id="btn-user-friend">Add Friend</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ============ SEND SHEET (after capture) ============ -->
-<div id="sheet-send" class="modal hidden">
-  <div class="modal-card sheet">
-    <h3>Send to…</h3>
-    <img id="send-preview" class="send-preview" alt="preview">
-    <div id="send-list" class="send-list"></div>
-    <button id="btn-send-story" class="btn-primary btn-block">Post to my story</button>
-    <button id="btn-send-cancel" class="btn-link btn-block">cancel</button>
+  <!-- ============ BIO ============ -->
+  <div id="sheet-bio" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Edit Bio</h3>
+      <input id="bio-input" class="field-soft" type="text" maxlength="120" autocomplete="off" placeholder="Write something about you">
+      <p id="bio-error" class="error" style="text-align:left"></p>
+      <div class="stack">
+        <button class="btn-block btn-yellow2" id="btn-bio-save">Save Bio</button>
+        <button class="btn-block btn-ghost" id="btn-bio-cancel">Cancel</button>
+      </div>
+    </div>
   </div>
+
+  <!-- ============ NAME CHANGE ============ -->
+  <div id="sheet-name" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Change Display Name</h3>
+      <input id="name-input" class="field-soft" type="text" maxlength="30" autocomplete="off">
+      <p class="set-note" style="margin-top:12px">You can only do this once, so make it count. Friends will see the new name everywhere in Blip.</p>
+      <p id="name-error" class="error" style="text-align:left"></p>
+      <div class="stack">
+        <button class="btn-block btn-yellow2" id="btn-name-save">Save New Name</button>
+        <button class="btn-block btn-ghost" id="btn-name-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STORY VIEWER ============ -->
+  <div id="screen-story" class="fs-view hidden">
+    <img id="story-img" class="full" alt="Story">
+    <div class="tapzone l" id="story-tap-left"></div>
+    <div class="tapzone r" id="story-tap-right"></div>
+    <div class="fs-top">
+      <div class="segbar" id="story-progress"></div>
+      <div class="fs-who">
+        <span id="story-avatar"></span>
+        <span><b id="story-who"></b><br><span id="story-when"></span></span>
+        <span class="sp"></span>
+        <button class="fs-x hidden" id="btn-story-del" aria-label="Delete story"></button>
+        <button class="fs-x" id="btn-story-close" aria-label="Close"></button>
+      </div>
+    </div>
+    <div class="fs-bottom hidden" id="story-reply-bar">
+      <button class="reply-pill" id="btn-story-reply">Reply to story…</button>
+    </div>
+  </div>
+
+  <!-- ============ PHOTO VIEWER ============ -->
+  <div id="screen-photo" class="fs-view hidden">
+    <img id="photo-img" class="full" alt="Photo message">
+    <div class="fs-top">
+      <div class="fs-who">
+        <span id="photo-avatar"></span>
+        <span><b id="photo-who"></b><br><span id="photo-when"></span></span>
+        <span class="sp"></span>
+        <button class="fs-x" id="btn-photo-close" aria-label="Close"></button>
+      </div>
+    </div>
+    <div class="fs-bottom">
+      <button class="reply-pill" id="btn-photo-reply">Reply…</button>
+    </div>
+  </div>
+
+  <!-- ============ CALL ============ -->
+  <div id="screen-call" class="call-view hidden">
+    <video id="call-remote" class="call-remote" autoplay playsinline></video>
+    <div class="call-shade"></div>
+    <video id="call-local" class="call-local hidden" autoplay playsinline muted></video>
+    <div class="call-info">
+      <span id="call-avatar"></span>
+      <div class="call-name" id="call-name"></div>
+      <div class="call-status" id="call-status"></div>
+    </div>
+    <div class="call-controls" id="call-controls">
+      <button class="call-ctl" id="btn-call-mute"><span class="cc"></span><small>Mute</small></button>
+      <button class="call-ctl" id="btn-call-speaker"><span class="cc"></span><small>Speaker</small></button>
+      <button class="call-ctl" id="btn-call-cam"><span class="cc"></span><small>Camera</small></button>
+      <button class="call-ctl" id="btn-call-end"><span class="cc end"></span><small>End</small></button>
+    </div>
+    <div class="call-controls hidden" id="call-incoming">
+      <button class="call-ctl" id="btn-call-decline"><span class="cc decline"></span><small>Decline</small></button>
+      <button class="call-ctl" id="btn-call-accept"><span class="cc accept"></span><small>Accept</small></button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
 </div>
 
-<!-- ============ STORY VIEWER ============ -->
-<div id="screen-story" class="screen hidden">
-  <div id="story-progress" class="story-progress"></div>
-  <header class="story-header">
-    <span id="story-who"></span>
-    <button id="btn-story-close" class="icon-btn light" aria-label="Close">✕</button>
-  </header>
-  <img id="story-img" alt="story">
-  <div id="story-tap-left" class="story-tap left"></div>
-  <div id="story-tap-right" class="story-tap right"></div>
-</div>
+<script>
+/* ================= Blip — app =================
+   Same Supabase backend as the original Blip (project daouhyikdlahagxoqdsk).
+   Tables: blip_profiles / blip_messages / blip_stories, bucket: blip-media. */
+const SUPABASE_URL = 'https://daouhyikdlahagxoqdsk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhb3VoeWlrZGxhaGFneG9xZHNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNTQ1NzAsImV4cCI6MjEwNjYzMDU3MH0.0I1c7DMxUEjF36p5oZbTvC2OBtGY9IS4xrvXdY0yfqw';
+const $ = (id) => document.getElementById(id);
+let sb = null;
+function makeClient(){
+  try { if (window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) { sb = null; }
+  return sb;
+}
+function loadSupabaseLib(){
+  return new Promise((resolve) => {
+    if (window.supabase) return resolve(true);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js';
+    s.onload = () => resolve(!!window.supabase);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+makeClient();
 
-<input id="hidden-file-cam" type="file" accept="image/*" hidden>
+/* ---------- icons (inline SVG, stroke style) ---------- */
+const IC = {
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.4-6.5-10.6A6.5 6.5 0 0 1 12 4.4a6.5 6.5 0 0 1 6.5 6A6.5 6.5 0 0 1 12 21Z"/><circle cx="12" cy="10.4" r="2.3"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8 8 0 0 1-8 7.6c-1.3 0-2.6-.3-3.7-.8L4 20l1.3-4.3A7.6 7.6 0 0 1 4 12 8 8 0 0 1 12 4.4a8 8 0 0 1 8.5 7.6Z"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h2.6l1.7-2.6h7.4L17.4 8H20a1.6 1.6 0 0 1 1.6 1.6v8.2A1.6 1.6 0 0 1 20 19.4H4a1.6 1.6 0 0 1-1.6-1.6V9.6A1.6 1.6 0 0 1 4 8Z"/><circle cx="12" cy="13.4" r="3.4"/></svg>',
+  people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="9.3" cy="10.4" r="1" fill="currentColor" stroke="none"/><circle cx="14.7" cy="10.4" r="1" fill="currentColor" stroke="none"/><path d="M8.2 15.4c1 1.3 2.3 2 3.8 2s2.8-.7 3.8-2"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5" width="16.8" height="14" rx="4"/><path d="M10.4 9.4v5.2L15 12Z" fill="currentColor" stroke="none"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="6.4"/><path d="M20 20l-3.9-3.9"/></svg>',
+  addUser:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8.2" r="3.6"/><path d="M3.8 19.6c.8-3.2 3.2-4.9 6.2-4.9s5.4 1.7 6.2 4.9"/><path d="M18.6 5.4v5M16.1 7.9h5"/></svg>',
+  flip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5A8 8 0 0 1 19 6.4M19.5 14.5A8 8 0 0 1 5 17.6"/><path d="M19.3 2.8v3.8h-3.8M4.7 21.2v-3.8h3.8"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.8 5.4 13.4h5L9.6 21.2l7.8-10.6h-5.1Z"/></svg>',
+  boltOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.8 5.4 13.4h5L9.6 21.2l7.8-10.6h-5.1Z"/><path d="M4 4l16 16"/></svg>',
+  chevL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5 8 12l6.5 7"/></svg>',
+  chevR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5 16 12l-6.5 7"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5" width="16.8" height="14" rx="2.6"/><circle cx="9" cy="10" r="1.7"/><path d="m5 17.4 4.6-4.2 3.4 3 2.6-2.4 3.4 3.2"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.4l1.6 4.4-2.3 1.8a12.6 12.6 0 0 0 6 6L15.6 14 20 15.6V19a1.8 1.8 0 0 1-2 1.8C10.4 20.2 3.8 13.6 3.2 6A1.8 1.8 0 0 1 5 4Z"/></svg>',
+  video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="12.4" height="10" rx="2.4"/><path d="M15.4 10.8 21 7.6v8.8l-5.6-3.2"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5h15M9.5 6V4.2A1.2 1.2 0 0 1 10.7 3h2.6a1.2 1.2 0 0 1 1.2 1.2V6M6.5 6.5l.8 12a1.6 1.6 0 0 0 1.6 1.5h6.2a1.6 1.6 0 0 0 1.6-1.5l.8-12"/></svg>',
+  photoSq:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="3.5"/></svg>',
+  mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.8" width="6" height="11" rx="3"/><path d="M5.6 11.2a6.4 6.4 0 0 0 12.8 0M12 17.6V21"/></svg>',
+  micOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9.2v-.9a3 3 0 0 1 5.8-1M15 11.4V8.3a3 3 0 0 0-.4-1.5M9 13.8a3 3 0 0 0 5.4 1.4"/><path d="M5.6 11.2a6.4 6.4 0 0 0 10.8 4.7M18.4 11.2a6.4 6.4 0 0 1-.9 3.3M12 17.6V21M4 4l16 16"/></svg>',
+  speaker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.6v4.8h3.4L12 18.5V5.5L7.4 9.6H4Z"/><path d="M15.4 9.2a4 4 0 0 1 0 5.6M17.8 6.9a7.4 7.4 0 0 1 0 10.2"/></svg>',
+  vidOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.2A2.4 2.4 0 0 1 5.4 7h7.2a2.4 2.4 0 0 1 2.4 2.4v5.2M15 11l6-3.4v8.8l-2.4-1.4M5.6 17h6.8M4 4l16 16"/></svg>',
+  phoneEnd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(135 12 12)"><path d="M5 4h3.4l1.6 4.4-2.3 1.8a12.6 12.6 0 0 0 6 6L15.6 14 20 15.6V19a1.8 1.8 0 0 1-2 1.8C10.4 20.2 3.8 13.6 3.2 6A1.8 1.8 0 0 1 5 4Z"/></g></svg>'
+};
+function setIco(el, name){ if (el) el.innerHTML = IC[name] || ''; }
+document.querySelectorAll('[data-ico]').forEach(el => setIco(el, el.dataset.ico));
+setIco($('btn-add-friend'), 'addUser'); setIco($('btn-add-friend2'), 'addUser');
+setIco($('btn-thread-back'), 'chevL'); setIco($('btn-profile-back'), 'chevL');
+setIco($('btn-friends-back'), 'chevL'); setIco($('btn-user-back'), 'chevL');
+setIco($('btn-thread-call'), 'phone'); setIco($('btn-thread-video'), 'video');
+setIco($('btn-thread-send'), 'send'); setIco($('btn-thread-cam'), 'camera');
+setIco($('btn-flip'), 'flip'); setIco($('btn-flash'), 'boltOff');
+setIco($('btn-cam-search'), 'search'); setIco($('btn-add-cam'), 'addUser');
+setIco($('btn-story-close'), 'x'); setIco($('btn-photo-close'), 'x'); setIco($('btn-story-del'), 'trash');
 
-<script type="module" src="app.js"></script>
+/* ---------- state ---------- */
+let me = null;
+let authMode = 'signup';
+let activeView = 'view-chats';
+let threadOther = null;
+let profilesCache = {};
+let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
+let nameChanged = false;     // one-time display-name change used?
+let camStream = null, facing = 'user', flashOn = false;
+let camRunning = false;
+let storyState = { who: null, items: [], idx: 0, timer: null };
+let photoReturn = null;       // where to go after closing a photo message
+
+/* ---------- helpers ---------- */
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function relTime(iso){
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return 'Now';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h';
+  return Math.floor(s / 86400) + 'd';
+}
+function fullTime(iso){
+  const d = new Date(iso), now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return sameDay ? t : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' · ' + t;
+}
+const AVCOLORS = ['#f23d55','#0fadff','#8329c9','#00b578','#ff8a00','#e84393','#2f6fed','#00a8a8','#8a6d1f','#5b8c00'];
+function avColor(seed){
+  let h = 0; const s = String(seed || '?');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVCOLORS[h % AVCOLORS.length];
+}
+function avatarHTML(p, cls){
+  const name = (p && (p.display_name || p.username)) || '?';
+  const color = avColor((p && (p.username || p.id)) || name);
+  const inner = (p && p.avatar_url)
+    ? '<img src="' + esc(p.avatar_url) + '" alt="">'
+    : esc(name[0].toUpperCase());
+  return '<div class="avatar ' + (cls || 'md') + '" style="background:' + color + '">' + inner + '</div>';
+}
+function show(el){ el.classList.remove('hidden'); }
+function hide(el){ el.classList.add('hidden'); }
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function loadLocal(){
+  try {
+    const raw = localStorage.getItem('blip_local_' + (me ? me.id : 'anon'));
+    if (raw) { const o = JSON.parse(raw); openedMap = o.opened || {}; nameChanged = !!o.nameChanged; }
+  } catch (e) {}
+}
+function saveLocal(){
+  try { localStorage.setItem('blip_local_' + me.id, JSON.stringify({ opened: openedMap, nameChanged })); } catch (e) {}
+}
+function markOpened(otherId){
+  openedMap[otherId] = new Date().toISOString(); saveLocal();
+}
+
+/* ---------- auth ---------- */
+async function init(){
+  wireAuth(); wireNav(); wireProfile(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls();
+  // Only the splash is visible while we check for an existing session —
+  // a signed-in user goes straight into the app with no login flash.
+  if (!sb) { const ok = await loadSupabaseLib(); if (ok) makeClient(); }
+  if (!sb) {
+    hide($('screen-splash')); show($('screen-auth'));
+    $('auth-error').textContent = 'Could not connect — check your connection, then reload.';
+    return;
+  }
+  const { data } = await sb.auth.getSession();
+  if (data.session) await enterApp(data.session.user);
+  else { hide($('screen-splash')); show($('screen-auth')); }
+}
+function wireAuth(){
+  $('btn-auth-toggle').onclick = () => {
+    authMode = authMode === 'signup' ? 'signin' : 'signup';
+    $('btn-auth').textContent = authMode === 'signup' ? 'Sign Up' : 'Log In';
+    $('btn-auth-toggle').textContent = authMode === 'signup' ? 'Already have an account? Log In' : 'New here? Sign Up';
+    $('auth-name-wrap').style.display = authMode === 'signup' ? '' : 'none';
+    $('auth-error').textContent = '';
+  };
+  $('auth-form').onsubmit = doAuth;
+}
+const NET_ERR_MSG = "Couldn't reach Blip's servers — check your connection and try again.";
+function isNetworkError(err){
+  if (!err) return false;
+  if (err.name === 'AuthRetryableFetchError') return true;
+  if (typeof err.status === 'number' && (err.status === 0 || err.status >= 500)) return true;
+  const m = String(err.message || err);
+  return /load failed|failed to fetch|network ?error|network request failed|fetch failed|loadfailed/i.test(m);
+}
+function authErrorText(err){
+  if (isNetworkError(err)) return NET_ERR_MSG;
+  return (err && err.message) ? err.message : 'Something went wrong — try again.';
+}
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+/* Run an auth call; on a network failure, wait a beat and try once more before giving up. */
+async function authCall(fn){
+  let res = await fn();
+  if (res && res.error && isNetworkError(res.error)) { await wait(1200); res = await fn(); }
+  return res;
+}
+async function doAuth(e){
+  e.preventDefault();
+  if (!sb) { $('auth-error').textContent = NET_ERR_MSG; return; }
+  const email = $('auth-email').value.trim();
+  const pw = $('auth-password').value;
+  $('auth-error').textContent = '';
+  if (!email || !pw) { $('auth-error').textContent = 'Enter your email and password.'; return; }
+  $('btn-auth').disabled = true;
+  try {
+    if (authMode === 'signup') {
+      const rawName = $('auth-name').value.trim();
+      const username = rawName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (username.length < 3) throw new Error('Pick a name with at least 3 letters or numbers.');
+      const { data, error } = await authCall(() => sb.auth.signUp({ email, password: pw }));
+      if (error) throw error;
+      const user = data.user;
+      if (!data.session) { $('auth-error').textContent = 'Check your email to confirm, then Log In.'; return; }
+      const { error: pErr } = await sb.from('blip_profiles').insert({ id: user.id, username, display_name: rawName });
+      if (pErr) { if (pErr.code === '23505') throw new Error('That name is taken.'); throw pErr; }
+      await enterApp(user);
+    } else {
+      const { data, error } = await authCall(() => sb.auth.signInWithPassword({ email, password: pw }));
+      if (error) throw error;
+      await enterApp(data.user);
+    }
+  } catch (err) { $('auth-error').textContent = authErrorText(err); }
+  finally { $('btn-auth').disabled = false; }
+}
+async function enterApp(user){
+  const { data: prof } = await sb.from('blip_profiles').select('*').eq('id', user.id).single();
+  if (!prof) { await sb.auth.signOut(); location.reload(); return; }
+  me = { ...prof, email: user.email };
+  profilesCache[me.id] = prof;
+  loadLocal();
+  refreshMyAvatars();
+  hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
+  switchView('view-camera');
+  loadFriends();
+  loadChats(); loadStories();
+  subscribeRealtime();
+  subscribeCallInbox();
+}
+function refreshMyAvatars(){
+  const html = avatarHTML(me, 'mini-avatar');
+  $('head-me-chats').innerHTML = html; $('head-me-stories').innerHTML = html; $('cam-me').innerHTML = html;
+  $('head-me-chats').firstChild.onclick = openProfile;
+  $('head-me-stories').firstChild.onclick = openProfile;
+  $('cam-me').firstChild.onclick = openProfile;
+  $('cam-me').firstChild.style.width = '34px'; $('cam-me').firstChild.style.height = '34px';
+  $('cam-me').firstChild.style.border = '2px solid rgba(255,255,255,.9)';
+}
+
+/* ---------- navigation ---------- */
+function wireNav(){
+  document.querySelectorAll('.tab').forEach(t => { t.onclick = () => switchView(t.dataset.view); });
+  $('tab-cam').onclick = () => switchView('view-camera');
+}
+function switchView(v){
+  activeView = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  ['view-chats','view-map','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
+  if (v === 'view-camera') startCamera(); else stopCamera();
+  if (v === 'view-chats') loadChats();
+  if (v === 'view-stories') loadStories();
+}
+
+/* ---------- profile ---------- */
+function wireProfile(){
+  $('btn-profile-back').onclick = () => hide($('screen-profile'));
+  $('set-add').onclick = () => { hide($('screen-profile')); openFriends(); };
+  $('set-name').onclick = openNameSheet;
+  $('btn-name-cancel').onclick = () => hide($('sheet-name'));
+  $('btn-name-save').onclick = saveName;
+  $('set-photo').onclick = () => $('file-avatar').click();
+  $('file-avatar').onchange = onAvatarFile;
+  $('set-bio').onclick = openBioSheet;
+  $('btn-bio-cancel').onclick = () => hide($('sheet-bio'));
+  $('btn-bio-save').onclick = saveBio;
+  $('sheet-bio').addEventListener('click', (e) => { if (e.target === $('sheet-bio')) hide($('sheet-bio')); });
+  $('btn-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+}
+function openProfile(){
+  $('profile-avatar').innerHTML = avatarHTML(me, 'lg');
+  $('profile-name').textContent = me.display_name;
+  $('profile-username').textContent = '@' + me.username;
+  const bioEl = $('profile-bio');
+  bioEl.textContent = me.bio || '';
+  bioEl.classList.toggle('hidden', !me.bio);
+  $('profile-email').textContent = me.email || '';
+  $('set-name-val').textContent = me.display_name;
+  $('set-bio-val').textContent = me.bio ? (me.bio.length > 18 ? me.bio.slice(0, 18) + '…' : me.bio) : 'Add a Bio';
+  show($('screen-profile'));
+}
+/* Profile photo: downscale, upload to blip-media, save URL on blip_profiles.avatar_url */
+async function onAvatarFile(e){
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  toast('Uploading Photo…');
+  let blob = f;
+  try {
+    const img = new Image();
+    img.src = URL.createObjectURL(f);
+    await img.decode();
+    const c = document.createElement('canvas');
+    const s = Math.min(1, 512 / Math.max(img.width, img.height));
+    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    blob = (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85))) || f;
+  } catch (err) {}
+  const path = me.id + '/avatar-' + Date.now() + '.jpg';
+  const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
+  if (error) { toast('Upload failed: ' + error.message); return; }
+  const url = sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
+  const { error: uErr } = await sb.from('blip_profiles').update({ avatar_url: url }).eq('id', me.id);
+  if (uErr) { toast('Could not save photo: ' + uErr.message); return; }
+  me.avatar_url = url;
+  profilesCache[me.id] = { ...profilesCache[me.id], avatar_url: url };
+  openProfile(); refreshMyAvatars();
+  toast('Profile Photo Updated');
+}
+function openBioSheet(){
+  $('bio-error').textContent = '';
+  $('bio-input').value = me.bio || '';
+  show($('sheet-bio'));
+  setTimeout(() => $('bio-input').focus(), 60);
+}
+async function saveBio(){
+  const raw = $('bio-input').value.trim();
+  $('btn-bio-save').disabled = true;
+  const { error } = await sb.from('blip_profiles').update({ bio: raw || null }).eq('id', me.id);
+  $('btn-bio-save').disabled = false;
+  if (error) { $('bio-error').textContent = error.message; return; }
+  me.bio = raw;
+  profilesCache[me.id] = { ...profilesCache[me.id], bio: raw };
+  hide($('sheet-bio')); openProfile();
+  toast('Bio Updated');
+}
+function openNameSheet(){
+  $('name-error').textContent = '';
+  if (nameChanged) { toast("You've already used your one name change."); return; }
+  $('name-input').value = me.display_name;
+  show($('sheet-name'));
+  setTimeout(() => $('name-input').focus(), 60);
+}
+async function saveName(){
+  const raw = $('name-input').value.trim();
+  if (raw.length < 2) { $('name-error').textContent = 'Name is too short.'; return; }
+  if (raw === me.display_name) { hide($('sheet-name')); return; }
+  $('btn-name-save').disabled = true;
+  const { error } = await sb.from('blip_profiles').update({ display_name: raw }).eq('id', me.id);
+  $('btn-name-save').disabled = false;
+  if (error) { $('name-error').textContent = error.message; return; }
+  me.display_name = raw;
+  profilesCache[me.id] = { ...profilesCache[me.id], display_name: raw };
+  nameChanged = true; saveLocal();
+  hide($('sheet-name')); openProfile(); refreshMyAvatars();
+  toast('Display Name Updated');
+}
+
+/* ---------- friends (blip_friends) ---------- */
+let friendIds = new Set();
+let friendSearchTimer = null;
+let viewUser = null;
+function wireFriends(){
+  $('btn-add-friend').onclick = openFriends;
+  $('btn-add-friend2').onclick = openFriends;
+  $('btn-add-cam').onclick = openFriends;
+  $('btn-cam-search').onclick = openFriends;
+  $('btn-friends-back').onclick = () => hide($('screen-friends'));
+  $('friend-search').addEventListener('input', () => {
+    clearTimeout(friendSearchTimer);
+    friendSearchTimer = setTimeout(doFriendSearch, 280);
+  });
+  $('friend-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doFriendSearch(); } });
+  $('btn-user-back').onclick = () => hide($('screen-user'));
+  $('btn-user-message').onclick = () => {
+    const p = viewUser;
+    hide($('screen-user')); hide($('screen-friends'));
+    if (p) openThread(p);
+  };
+  $('btn-user-friend').onclick = async () => {
+    if (!viewUser) return;
+    if (friendIds.has(viewUser.id)) await removeFriend(viewUser.id);
+    else await addFriend(viewUser);
+    renderUserFriendBtn();
+    renderFriendList();
+  };
+}
+async function openFriends(){
+  $('friend-search').value = ''; $('friend-results').innerHTML = ''; $('friend-error').textContent = '';
+  show($('screen-friends'));
+  await loadFriends();
+  renderFriendList();
+}
+async function loadFriends(){
+  friendIds = new Set();
+  if (!sb || !me) return friendIds;
+  const { data, error } = await sb.from('blip_friends').select('friend_id').eq('user_id', me.id);
+  if (error) return friendIds;
+  (data || []).forEach(r => friendIds.add(r.friend_id));
+  if (friendIds.size) await fetchProfiles([...friendIds]);
+  return friendIds;
+}
+/* Friendships are mutual: one row each way in blip_friends. */
+async function addFriend(p){
+  const { error } = await sb.from('blip_friends').insert([
+    { user_id: me.id, friend_id: p.id },
+    { user_id: p.id, friend_id: me.id }
+  ]);
+  if (error) { toast('Could not add friend: ' + error.message); return false; }
+  friendIds.add(p.id);
+  profilesCache[p.id] = p;
+  toast('Added ' + (p.display_name || 'Friend'));
+  return true;
+}
+async function removeFriend(id){
+  const { error } = await sb.from('blip_friends').delete()
+    .or('and(user_id.eq.' + me.id + ',friend_id.eq.' + id + '),and(user_id.eq.' + id + ',friend_id.eq.' + me.id + ')');
+  if (error) { toast('Could not remove friend: ' + error.message); return false; }
+  friendIds.delete(id);
+  toast('Friend Removed');
+  return true;
+}
+function personRow(p){
+  const r = document.createElement('div');
+  r.className = 'chat-row';
+  r.style.paddingLeft = '2px'; r.style.paddingRight = '2px';
+  r.innerHTML = avatarHTML(p, 'md') +
+    '<div class="row-main"><div class="row-name">' + esc(p.display_name) + '</div>' +
+    '<div class="row-status"><span class="st-plain">@' + esc(p.username) + '</span></div></div>';
+  return r;
+}
+function renderFriendList(){
+  const list = $('friend-list'); list.innerHTML = '';
+  const friends = [...friendIds].map(id => profilesCache[id]).filter(Boolean)
+    .sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || '')));
+  $('friends-empty').classList.toggle('hidden', friends.length > 0);
+  friends.forEach(p => {
+    const r = personRow(p);
+    const rm = document.createElement('button');
+    rm.className = 'btn-mini remove'; rm.textContent = 'Remove';
+    rm.onclick = async (e) => { e.stopPropagation(); if (await removeFriend(p.id)) renderFriendList(); };
+    r.appendChild(rm);
+    r.onclick = () => openUserProfile(p);
+    list.appendChild(r);
+  });
+}
+async function doFriendSearch(){
+  const q = $('friend-search').value.trim().toLowerCase();
+  const box = $('friend-results');
+  $('friend-error').textContent = '';
+  if (!q) { box.innerHTML = ''; return; }
+  const { data, error } = await sb.from('blip_profiles').select('*').ilike('username', '%' + q + '%').limit(8);
+  if (error) { $('friend-error').textContent = error.message; return; }
+  const hits = (data || []).filter(p => p.id !== me.id);
+  box.innerHTML = '';
+  if (!hits.length) { box.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:4px 2px">No one found with that username.</p>'; return; }
+  const head = document.createElement('div');
+  head.className = 'sec-label'; head.style.padding = '10px 0 6px'; head.textContent = 'Results';
+  box.appendChild(head);
+  hits.forEach(p => {
+    profilesCache[p.id] = p;
+    const isF = friendIds.has(p.id);
+    const r = personRow(p);
+    const btn = document.createElement('button');
+    btn.className = 'btn-mini' + (isF ? ' added' : '');
+    btn.textContent = isF ? 'Friends' : 'Add';
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!friendIds.has(p.id) && await addFriend(p)) { renderFriendList(); doFriendSearch(); }
+    };
+    r.appendChild(btn);
+    r.onclick = () => openUserProfile(p);
+    box.appendChild(r);
+  });
+}
+/* ---------- viewable user profile ---------- */
+function openUserProfile(p){
+  if (!p) return;
+  if (me && p.id === me.id) { openProfile(); return; }
+  viewUser = p;
+  $('user-avatar').innerHTML = avatarHTML(p, 'lg');
+  $('user-name').textContent = p.display_name || p.username;
+  $('user-username').textContent = '@' + p.username;
+  const bioEl = $('user-bio');
+  bioEl.textContent = p.bio || '';
+  bioEl.classList.toggle('hidden', !p.bio);
+  renderUserFriendBtn();
+  show($('screen-user'));
+}
+function renderUserFriendBtn(){
+  if (!viewUser) return;
+  const isF = friendIds.has(viewUser.id);
+  const b = $('btn-user-friend');
+  b.textContent = isF ? 'Remove Friend' : 'Add Friend';
+  b.className = 'btn-block ' + (isF ? 'btn-ghost' : 'btn-yellow2');
+}
+</script>
+
+<script>
+/* ---------- chats ---------- */
+async function getThreads(){
+  const { data, error } = await sb.from('blip_messages')
+    .select('*')
+    .or('sender_id.eq.' + me.id + ',receiver_id.eq.' + me.id)
+    .order('created_at', { ascending: false }).limit(300);
+  if (error || !data) return [];
+  const seen = new Map();
+  for (const m of data) {
+    const otherId = m.sender_id === me.id ? m.receiver_id : m.sender_id;
+    if (!seen.has(otherId)) seen.set(otherId, m);
+  }
+  const ids = [...seen.keys()];
+  await fetchProfiles(ids);
+  return ids.map(id => ({ other: profilesCache[id], last: seen.get(id) })).filter(t => t.other);
+}
+async function fetchProfiles(ids){
+  const missing = ids.filter(id => !profilesCache[id]);
+  if (!missing.length) return;
+  const { data } = await sb.from('blip_profiles').select('*').in('id', missing);
+  (data || []).forEach(p => profilesCache[p.id] = p);
+}
+function statusFor(m, otherId){
+  const opened = openedMap[otherId];
+  const isUnread = m.receiver_id === me.id && (!opened || new Date(m.created_at) > new Date(opened));
+  if (m.image_url) {
+    if (m.sender_id === me.id) return { cls: 'st-photo', dot: 'var(--photo)', label: 'Delivered', unread: false };
+    return isUnread
+      ? { cls: 'st-photo', dot: 'var(--photo)', label: 'New Message', unread: true }
+      : { cls: 'st-plain', dot: '#c6ccd4', label: 'Opened', unread: false };
+  }
+  if (m.sender_id === me.id) return { cls: 'st-chat', dot: 'var(--chat)', label: 'Delivered', unread: false };
+  return isUnread
+    ? { cls: 'st-chat', dot: 'var(--chat)', label: 'New Message', unread: true }
+    : { cls: 'st-plain', dot: '#c6ccd4', label: 'Opened', unread: false };
+}
+async function loadChats(){
+  const list = $('chat-list');
+  const threads = await getThreads();
+  list.innerHTML = '';
+  $('chats-empty').classList.toggle('hidden', threads.length > 0);
+  threads.forEach(t => {
+    const m = t.last, st = statusFor(m, t.other.id);
+    const snippet = m.image_url ? '' : ' · ' + esc((m.body || '').slice(0, 42));
+    const r = document.createElement('div');
+    r.className = 'chat-row';
+    r.innerHTML = avatarHTML(t.other, 'md') +
+      '<div class="row-main"><div class="row-name' + (st.unread ? ' unread' : '') + '">' + esc(t.other.display_name) + '</div>' +
+      '<div class="row-status"><span class="dot" style="background:' + st.dot + '"></span><span class="' + st.cls + '">' + st.label + '</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500">' + snippet + '</span></div></div>' +
+      (st.unread ? '<span class="unread-dot"></span>' : '');
+    r.onclick = () => openThread(t.other);
+    list.appendChild(r);
+  });
+}
+
+/* ---------- thread ---------- */
+function wireChat(){
+  $('btn-thread-back').onclick = closeThread;
+  $('thread-who').onclick = () => { if (threadOther) openUserProfile(threadOther); };
+  $('btn-thread-call').onclick = () => startCall('audio');
+  $('btn-thread-video').onclick = () => startCall('video');
+  $('btn-thread-cam').onclick = () => { closeThread(); switchView('view-camera'); };
+  $('thread-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const t = $('thread-text').value.trim();
+    if (!t || !threadOther) return;
+    $('thread-text').value = '';
+    await sendMessage(threadOther.id, t, null);
+  };
+}
+function closeThread(){
+  threadOther = null;
+  hide($('screen-thread')); show($('screen-main'));
+  loadChats();
+}
+async function openThread(other){
+  threadOther = other;
+  markOpened(other.id);
+  $('thread-name').textContent = other.display_name;
+  $('thread-user').textContent = '@' + other.username;
+  $('thread-avatar').innerHTML = avatarHTML(other, 'sm');
+  $('thread-messages').innerHTML = '';
+  show($('screen-thread')); hide($('screen-main'));
+  await loadThreadMessages();
+  const box = $('thread-messages');
+  box.scrollTop = box.scrollHeight;
+}
+async function loadThreadMessages(){
+  const { data } = await sb.from('blip_messages').select('*')
+    .or('and(sender_id.eq.' + me.id + ',receiver_id.eq.' + threadOther.id + '),and(sender_id.eq.' + threadOther.id + ',receiver_id.eq.' + me.id + ')')
+    .order('created_at', { ascending: true }).limit(500);
+  const box = $('thread-messages'); box.innerHTML = '';
+  let lastDay = '', lastSender = null;
+  (data || []).forEach(m => {
+    const day = new Date(m.created_at).toDateString();
+    if (day !== lastDay) {
+      const sep = document.createElement('div');
+      sep.className = 'day-sep';
+      sep.textContent = new Date(m.created_at).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      box.appendChild(sep); lastDay = day; lastSender = null;
+    }
+    box.appendChild(bubble(m, m.sender_id !== lastSender));
+    lastSender = m.sender_id;
+  });
+}
+function bubble(m, gap){
+  const mine = m.sender_id === me.id;
+  const row = document.createElement('div');
+  row.className = 'bubble-row ' + (mine ? 'me' : 'them') + (gap ? ' gap' : '');
+  row.dataset.mid = m.id;
+  if (m.image_url) {
+    const seen = mine || (openedMap[m.sender_id] && new Date(m.created_at) <= new Date(openedMap[m.sender_id]));
+    const card = document.createElement('div');
+    card.className = 'photo-card' + (seen ? ' seen' : '');
+    card.innerHTML = '<span class="photo-ico">' + IC.photoSq + '</span><span><b>' + (mine ? 'Photo Message' : 'New Message') + '</b><small>' + (seen ? 'Opened · ' : 'Tap to view · ') + relTime(m.created_at) + '</small></span>';
+    card.onclick = () => openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
+    row.appendChild(card);
+  }
+  if (m.body) {
+    const b = document.createElement('div');
+    b.className = 'bubble'; b.textContent = m.body;
+    row.appendChild(b);
+  }
+  const t = document.createElement('div');
+  t.className = 'btime'; t.textContent = fullTime(m.created_at);
+  row.appendChild(t);
+  return row;
+}
+async function sendMessage(receiverId, body, imageUrl){
+  const temp = {
+    id: 'tmp-' + Date.now(), sender_id: me.id, receiver_id: receiverId,
+    body: body || null, image_url: imageUrl || null, created_at: new Date().toISOString()
+  };
+  if (threadOther && threadOther.id === receiverId) {
+    $('thread-messages').appendChild(bubble(temp, true));
+    $('thread-messages').scrollTop = $('thread-messages').scrollHeight;
+  }
+  const { data, error } = await sb.from('blip_messages')
+    .insert({ sender_id: me.id, receiver_id: receiverId, body: body || null, image_url: imageUrl || null })
+    .select().single();
+  if (error) { toast('Could not send: ' + error.message); return; }
+  const tmpEl = document.querySelector('[data-mid="' + temp.id + '"]');
+  if (tmpEl) tmpEl.dataset.mid = data.id;
+}
+
+/* ---------- photo message viewer ---------- */
+function openPhoto(m, who){
+  photoReturn = threadOther;
+  $('photo-img').src = m.image_url;
+  $('photo-who').textContent = (who && who.display_name) || 'Photo';
+  $('photo-when').textContent = fullTime(m.created_at);
+  $('photo-avatar').innerHTML = who ? avatarHTML(who, 'sm') : '';
+  if (m.sender_id !== me.id) markOpened(m.sender_id);
+  show($('screen-photo'));
+}
+function closePhoto(){ hide($('screen-photo')); $('photo-img').src = ''; }
+function wirePhoto(){
+  $('btn-photo-close').onclick = closePhoto;
+  $('btn-photo-reply').onclick = () => {
+    const other = photoReturn;
+    closePhoto();
+    if (other && (!threadOther || threadOther.id !== other.id)) openThread(other);
+    setTimeout(() => $('thread-text').focus(), 80);
+  };
+}
+
+/* ---------- realtime ---------- */
+function subscribeRealtime(){
+  sb.channel('blip-feed')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_messages' }, (p) => {
+      const m = p.new;
+      if (m.sender_id !== me.id && m.receiver_id !== me.id) return;
+      const inThread = threadOther && !$('screen-thread').classList.contains('hidden') &&
+        (m.sender_id === threadOther.id || m.receiver_id === threadOther.id);
+      if (inThread) {
+        if (!document.querySelector('[data-mid="' + m.id + '"]')) {
+          $('thread-messages').appendChild(bubble(m, true));
+          $('thread-messages').scrollTop = $('thread-messages').scrollHeight;
+        }
+        if (m.sender_id === threadOther.id) markOpened(threadOther.id);
+      } else if (activeView === 'view-chats') loadChats();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_stories' }, () => {
+      if (activeView === 'view-stories') loadStories();
+    })
+    .subscribe();
+}
+
+/* ---------- camera ---------- */
+function wireCamera(){
+  $('btn-shutter').onclick = capturePhoto;
+  $('btn-cam-start').onclick = startCamera;
+  $('btn-flip').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; stopCamera(); startCamera(); };
+  $('btn-flash').onclick = () => {
+    flashOn = !flashOn;
+    $('btn-flash').classList.toggle('on', flashOn);
+    setIco($('btn-flash'), flashOn ? 'bolt' : 'boltOff');
+    const track = camStream && camStream.getVideoTracks()[0];
+    if (track && track.getCapabilities && track.getCapabilities().torch) {
+      track.applyConstraints({ advanced: [{ torch: flashOn }] }).catch(() => {});
+    }
+  };
+  const onFile = (e) => { const f = e.target.files[0]; if (f) uploadFallback(f); e.target.value = ''; };
+  $('file-upload').onchange = onFile;
+  $('file-upload2').onchange = onFile;
+  wirePhoto();
+}
+async function startCamera(){
+  hide($('cam-off'));
+  if (camStream) { camRunning = true; requestAnimationFrame(camTick); return; }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+  } catch (e) { show($('cam-off')); return; }
+  const v = document.createElement('video');
+  v.srcObject = camStream; v.muted = true; v.playsInline = true;
+  await v.play();
+  window._blipVideo = v;
+  camRunning = true;
+  requestAnimationFrame(camTick);
+}
+function stopCamera(){
+  camRunning = false;
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; window._blipVideo = null; }
+}
+function camTick(){
+  if (!camRunning) return;
+  const v = window._blipVideo, canvas = $('cam-canvas');
+  if (!v || v.readyState < 2) { requestAnimationFrame(camTick); return; }
+  const W = v.videoWidth, H = v.videoHeight;
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  if (facing === 'user') { ctx.translate(W, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(v, 0, 0, W, H);
+  ctx.restore();
+  requestAnimationFrame(camTick);
+}
+function capturePhoto(){
+  const canvas = $('cam-canvas');
+  if (!canvas.width) { show($('cam-off')); return; }
+  if (flashOn) {
+    const f = $('flash-flash');
+    f.style.transition = 'none'; f.style.opacity = '0.9';
+    requestAnimationFrame(() => { f.style.transition = 'opacity .45s'; f.style.opacity = '0'; });
+  }
+  canvas.toBlob(async (blob) => {
+    if (!blob) return;
+    toast('Uploading Photo…');
+    const url = await uploadImage(blob);
+    if (url) openSendSheet(url);
+  }, 'image/jpeg', 0.85);
+}
+async function uploadFallback(file){
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+  await img.decode();
+  const c = document.createElement('canvas');
+  const s = Math.min(1, 1280 / Math.max(img.width, img.height));
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+  toast('Uploading Photo…');
+  const url = await uploadImage(blob);
+  if (url) openSendSheet(url);
+}
+async function uploadImage(blob){
+  const path = me.id + '/' + Date.now() + '.jpg';
+  const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
+  if (error) { toast('Upload failed: ' + error.message); return null; }
+  return sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- send sheet ---------- */
+function wireSendSheet(){
+  $('btn-send-cancel').onclick = () => hide($('sheet-send'));
+  $('sheet-send').addEventListener('click', (e) => { if (e.target === $('sheet-send')) hide($('sheet-send')); });
+  $('sheet-name').addEventListener('click', (e) => { if (e.target === $('sheet-name')) hide($('sheet-name')); });
+}
+async function openSendSheet(imageUrl){
+  $('send-preview').src = imageUrl;
+  const list = $('send-list');
+  list.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">Loading friends…</p>';
+  show($('sheet-send'));
+  const threads = await getThreads();
+  const byId = new Map(threads.map(t => [t.other.id, t.other]));
+  [...friendIds].forEach(id => { if (!byId.has(id) && profilesCache[id]) byId.set(id, profilesCache[id]); });
+  const people = [...byId.values()];
+  list.innerHTML = '';
+  people.forEach(other => {
+    const r = document.createElement('div');
+    r.className = 'pick-row';
+    r.innerHTML = avatarHTML(other, 'sm') + '<div class="row-main"><b>' + esc(other.display_name) + '</b><span>@' + esc(other.username) + '</span></div>';
+    r.onclick = async () => {
+      hide($('sheet-send'));
+      await sendMessage(other.id, '', imageUrl);
+      openThread(other);
+    };
+    list.appendChild(r);
+  });
+  if (!people.length) list.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">No friends yet — add a friend first, or post it to your story.</p>';
+  $('btn-send-story').onclick = async () => {
+    hide($('sheet-send'));
+    const { error } = await sb.from('blip_stories').insert({
+      user_id: me.id, image_url: imageUrl,
+      expires_at: new Date(Date.now() + 864e5).toISOString()
+    });
+    if (error) toast('Could not post story: ' + error.message);
+    else { toast('Posted to Your Story'); switchView('view-stories'); }
+  };
+}
+
+/* ---------- stories ---------- */
+function wireStories(){
+  $('btn-story-close').onclick = closeStoryViewer;
+  $('story-tap-right').onclick = () => { if (storyState.idx + 1 < storyState.items.length) { storyState.idx++; renderStorySeg(); } else closeStoryViewer(); };
+  $('story-tap-left').onclick = () => { if (storyState.idx > 0) { storyState.idx--; renderStorySeg(); } };
+  $('btn-story-del').onclick = deleteCurrentStory;
+  $('btn-story-reply').onclick = () => {
+    const who = storyState.who;
+    closeStoryViewer();
+    if (who && who.id !== me.id) { openThread(who); setTimeout(() => $('thread-text').focus(), 80); }
+  };
+}
+async function loadStories(){
+  const { data } = await sb.from('blip_stories').select('*')
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false }).limit(100);
+  const items = data || [];
+  const byUser = new Map();
+  items.forEach(s => { if (!byUser.has(s.user_id)) byUser.set(s.user_id, []); byUser.get(s.user_id).push(s); });
+  await fetchProfiles([...byUser.keys()]);
+
+  // My Story strip
+  const strip = $('my-story-strip'); strip.innerHTML = '';
+  const mine = byUser.get(me.id);
+  const chip = document.createElement('div');
+  chip.className = 'story-chip';
+  chip.innerHTML = '<div class="ring-wrap"><div class="ring ' + (mine ? 'purple' : 'yellow') + '"><div class="ring-inner">' + avatarHTML(me, 'md') + '</div></div>' +
+    (mine ? '' : '<span class="plus">' + IC.plus + '</span>') + '</div><span>' + (mine ? 'My Story' : 'Add to Story') + '</span>';
+  chip.onclick = () => { if (mine) openStoryViewer(me, mine); else switchView('view-camera'); };
+  strip.appendChild(chip);
+  if (mine) {
+    const viewChip = document.createElement('div');
+    viewChip.className = 'story-chip';
+    viewChip.innerHTML = '<div class="ring yellow"><div class="ring-inner"><img src="' + esc(mine[0].image_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div></div><span>' + relTime(mine[0].created_at) + ' ago</span>';
+    viewChip.onclick = () => openStoryViewer(me, mine);
+    strip.appendChild(viewChip);
+  }
+
+  // Friends grid
+  const grid = $('story-grid'); grid.innerHTML = '';
+  const friends = [...byUser.entries()].filter(([id]) => id !== me.id);
+  $('stories-empty').classList.toggle('hidden', friends.length > 0);
+  friends.forEach(([id, stories]) => {
+    const p = profilesCache[id] || { display_name: '?', username: '?' };
+    const latest = stories[0];
+    const card = document.createElement('button');
+    card.className = 'story-card';
+    card.innerHTML = '<img class="ph" src="' + esc(latest.image_url) + '" alt="Story by ' + esc(p.display_name) + '">' +
+      '<div class="sc-shade"></div>' +
+      '<div class="sc-who">' + avatarHTML(p, 'sm') + '<b>' + esc(p.display_name) + '</b></div>' +
+      '<div class="sc-when">' + relTime(latest.created_at) + ' ago</div>' +
+      (stories.length > 1 ? '<div class="sc-count">' + stories.length + ' Stories</div>' : '');
+    card.onclick = () => openStoryViewer(p, [...stories].reverse());
+    grid.appendChild(card);
+  });
+}
+function openStoryViewer(who, stories){
+  if (!stories || !stories.length) return;
+  storyState = { who, items: stories, idx: 0, timer: null };
+  show($('screen-story'));
+  renderStorySeg();
+}
+function renderStorySeg(){
+  const { who, items, idx } = storyState;
+  const s = items[idx];
+  $('story-who').textContent = who.display_name || who.username;
+  $('story-when').textContent = relTime(s.created_at) + ' ago';
+  $('story-avatar').innerHTML = avatarHTML(who, 'sm');
+  $('story-img').src = s.image_url;
+  $('btn-story-del').classList.toggle('hidden', who.id !== me.id);
+  $('story-reply-bar').classList.toggle('hidden', who.id === me.id);
+  const prog = $('story-progress'); prog.innerHTML = '';
+  items.forEach((_, i) => {
+    const seg = document.createElement('div'); seg.className = 'seg';
+    seg.innerHTML = '<i style="width:' + (i < idx ? 100 : 0) + '%"></i>';
+    prog.appendChild(seg);
+  });
+  clearTimeout(storyState.timer);
+  const bar = prog.children[idx].firstChild;
+  bar.style.transition = 'none'; bar.style.width = '0';
+  requestAnimationFrame(() => { bar.style.transition = 'width 5s linear'; bar.style.width = '100%'; });
+  storyState.timer = setTimeout(() => {
+    if (storyState.idx + 1 < storyState.items.length) { storyState.idx++; renderStorySeg(); }
+    else closeStoryViewer();
+  }, 5000);
+}
+async function deleteCurrentStory(){
+  const s = storyState.items[storyState.idx];
+  if (!s) return;
+  const { error } = await sb.from('blip_stories').delete().eq('id', s.id);
+  if (error) { toast('Could not delete: ' + error.message); return; }
+  toast('Story deleted');
+  storyState.items.splice(storyState.idx, 1);
+  if (!storyState.items.length) { closeStoryViewer(); loadStories(); return; }
+  if (storyState.idx >= storyState.items.length) storyState.idx = storyState.items.length - 1;
+  renderStorySeg(); loadStories();
+}
+function closeStoryViewer(){ clearTimeout(storyState.timer); hide($('screen-story')); }
+
+/* ---------- calls: 1:1 voice & video (WebRTC, signaling over Supabase Realtime) ---------- */
+const RTC_CFG = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' }
+] };
+let callState = null;      // active call (outgoing, ringing-in, or connected)
+let callInbox = null;      // my own signaling channel
+const callSenders = {};    // userId -> channel entry for sending signals
+
+function callSenderFor(userId){
+  let s = callSenders[userId];
+  if (s) return s;
+  const ch = sb.channel('blip-call-' + userId, { config: { broadcast: { self: false } } });
+  s = { ch, ready: false, queue: [] };
+  callSenders[userId] = s;
+  ch.subscribe((status) => {
+    if (status === 'SUBSCRIBED') { s.ready = true; s.queue.splice(0).forEach(m => { try { ch.send(m); } catch (e) {} }); }
+  });
+  return s;
+}
+function sendSignal(toId, payload){
+  if (!sb) return;
+  const s = callSenderFor(toId);
+  const msg = { type: 'broadcast', event: 'signal', payload };
+  if (s.ready) { try { s.ch.send(msg); } catch (e) {} } else s.queue.push(msg);
+}
+function subscribeCallInbox(){
+  if (callInbox || !sb || !me) return;
+  callInbox = sb.channel('blip-call-' + me.id, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'signal' }, ({ payload }) => onCallSignal(payload || {}))
+    .subscribe();
+}
+function freshCall(fields){
+  return Object.assign({
+    pc: null, localStream: null, pendingOffer: null, iceQueue: [],
+    muted: false, speaker: false, camOff: false, connected: false,
+    timerInt: null, ringTimeout: null, startedAt: 0
+  }, fields);
+}
+function onCallSignal(p){
+  if (!p.kind || !me || p.fromId === me.id) return;
+  if (p.kind === 'invite') {
+    if (callState) { sendSignal(p.fromId, { kind: 'decline', fromId: me.id, busy: true }); return; }
+    const type = p.callType === 'video' ? 'video' : 'audio';
+    callState = freshCall({
+      mode: 'in', type,
+      other: { id: p.fromId, display_name: p.fromName || 'Friend', username: p.fromUsername || '' },
+      pendingOffer: p.offer, speaker: type === 'video'
+    });
+    showCallScreen();
+    setCallStatus(type === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call');
+    hide($('call-controls')); show($('call-incoming'));
+    startRing();
+    if (navigator.vibrate) { try { navigator.vibrate([500, 250, 500, 250, 500]); } catch (e) {} }
+    const cs = callState;
+    cs.ringTimeout = setTimeout(() => { if (callState === cs && !cs.connected) endCall(false); }, 45000);
+    return;
+  }
+  if (!callState || !callState.other || p.fromId !== callState.other.id) {
+    if (p.kind === 'ice' && callState) return;
+    return;
+  }
+  if (p.kind === 'answer') {
+    const cs = callState;
+    (async () => {
+      try {
+        if (cs.pc && !cs.pc.remoteDescription) {
+          await cs.pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
+          flushIce(cs);
+        }
+      } catch (e) {}
+    })();
+  } else if (p.kind === 'ice') {
+    addIce(callState, p.candidate);
+  } else if (p.kind === 'decline') {
+    if (callState.mode === 'out' && !callState.connected) {
+      const cs = callState;
+      clearTimeout(cs.ringTimeout);
+      setCallStatus(p.busy ? 'Busy' : 'Declined');
+      setTimeout(() => { if (callState === cs) endCall(false); }, 1300);
+    }
+  } else if (p.kind === 'end' || p.kind === 'cancel') {
+    const wasRingingIn = callState.mode === 'in' && !callState.connected;
+    endCall(false);
+    if (wasRingingIn) toast('Missed Call');
+  }
+}
+function addIce(cs, candidate){
+  if (!candidate) return;
+  if (cs.pc && cs.pc.remoteDescription) {
+    cs.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+  } else cs.iceQueue.push(candidate);
+}
+function flushIce(cs){
+  const q = cs.iceQueue.splice(0);
+  q.forEach(c => addIce(cs, c));
+}
+function makePC(otherId){
+  const pc = new RTCPeerConnection(RTC_CFG);
+  pc.onicecandidate = (e) => { if (e.candidate) sendSignal(otherId, { kind: 'ice', fromId: me.id, candidate: e.candidate }); };
+  pc.ontrack = (e) => {
+    const v = $('call-remote');
+    if (e.streams && e.streams[0] && v.srcObject !== e.streams[0]) v.srcObject = e.streams[0];
+  };
+  pc.onconnectionstatechange = () => {
+    if (!callState || callState.pc !== pc) return;
+    if (pc.connectionState === 'connected') onCallConnected();
+    else if (pc.connectionState === 'disconnected' && callState.connected) setCallStatus('Reconnecting…');
+    else if (pc.connectionState === 'failed') { toast('Call Connection Failed'); endCall(true); }
+  };
+  return pc;
+}
+async function startCall(type){
+  if (!threadOther || !sb) return;
+  if (callState) { toast('Already in a Call'); return; }
+  const other = threadOther;
+  stopCamera(); // free the camera/mic for the call
+  callState = freshCall({ mode: 'out', type, other, speaker: type === 'video' });
+  showCallScreen();
+  setCallStatus('Calling…');
+  try {
+    callState.localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: type === 'video' ? { facingMode: 'user' } : false
+    });
+  } catch (e) { toast('Camera or Mic Blocked'); endCall(false); return; }
+  if (!callState) return;
+  attachLocalPreview();
+  const pc = makePC(other.id);
+  callState.pc = pc;
+  callState.localStream.getTracks().forEach(t => pc.addTrack(t, callState.localStream));
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+  } catch (e) { toast('Could Not Start Call'); endCall(false); return; }
+  if (!callState) return;
+  sendSignal(other.id, {
+    kind: 'invite', fromId: me.id, fromName: me.display_name, fromUsername: me.username,
+    callType: type, offer: pc.localDescription
+  });
+  setCallStatus('Ringing…');
+  const cs = callState;
+  cs.ringTimeout = setTimeout(() => {
+    if (callState === cs && !cs.connected) { toast('No Answer'); endCall(true); }
+  }, 35000);
+}
+async function acceptCall(){
+  const cs = callState;
+  if (!cs || cs.mode !== 'in') return;
+  stopRing();
+  clearTimeout(cs.ringTimeout);
+  stopCamera();
+  try {
+    cs.localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: cs.type === 'video' ? { facingMode: 'user' } : false
+    });
+  } catch (e) { toast('Camera or Mic Blocked'); declineCall(); return; }
+  if (callState !== cs) { cs.localStream.getTracks().forEach(t => t.stop()); return; }
+  attachLocalPreview();
+  const pc = makePC(cs.other.id);
+  cs.pc = pc;
+  cs.localStream.getTracks().forEach(t => pc.addTrack(t, cs.localStream));
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(cs.pendingOffer));
+    flushIce(cs);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+  } catch (e) { toast('Could Not Connect Call'); endCall(true); return; }
+  if (callState !== cs) return;
+  sendSignal(cs.other.id, { kind: 'answer', fromId: me.id, sdp: pc.localDescription });
+  hide($('call-incoming')); show($('call-controls'));
+  setCallStatus('Connecting…');
+}
+function declineCall(){
+  if (!callState) return;
+  sendSignal(callState.other.id, { kind: 'decline', fromId: me.id });
+  endCall(false);
+}
+function onCallConnected(){
+  const cs = callState;
+  if (!cs || cs.connected) return;
+  cs.connected = true;
+  clearTimeout(cs.ringTimeout);
+  stopRing();
+  hide($('call-incoming')); show($('call-controls'));
+  if (cs.type === 'video') $('call-avatar').style.display = 'none';
+  cs.startedAt = Date.now();
+  setCallStatus('0:00');
+  cs.timerInt = setInterval(() => {
+    if (callState === cs) setCallStatus(fmtDur(Math.floor((Date.now() - cs.startedAt) / 1000)));
+  }, 1000);
+}
+function endCall(notify){
+  if (callState && notify && callState.other) {
+    const kind = (callState.mode === 'out' && !callState.connected) ? 'cancel' : 'end';
+    sendSignal(callState.other.id, { kind, fromId: me.id });
+  }
+  cleanupCall();
+}
+function cleanupCall(){
+  stopRing();
+  if (callState) {
+    clearTimeout(callState.ringTimeout);
+    clearInterval(callState.timerInt);
+    if (callState.pc) { try { callState.pc.close(); } catch (e) {} }
+    if (callState.localStream) callState.localStream.getTracks().forEach(t => t.stop());
+  }
+  callState = null;
+  const rv = $('call-remote'), lv = $('call-local');
+  if (rv) rv.srcObject = null;
+  if (lv) lv.srcObject = null;
+  const av = $('call-avatar'); if (av) av.style.display = '';
+  hide($('screen-call'));
+}
+function fmtDur(s){ return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function setCallStatus(t){ $('call-status').textContent = t; }
+function showCallScreen(){
+  const cs = callState;
+  $('call-name').textContent = cs.other.display_name || 'Friend';
+  $('call-avatar').innerHTML = avatarHTML(cs.other, 'lg');
+  $('call-remote').classList.toggle('hidden', cs.type !== 'video');
+  $('btn-call-cam').style.display = cs.type === 'video' ? '' : 'none';
+  hide($('call-incoming')); show($('call-controls'));
+  $('call-local').classList.add('hidden');
+  updateCallControls();
+  show($('screen-call'));
+}
+function attachLocalPreview(){
+  const cs = callState;
+  if (!cs || !cs.localStream) return;
+  const lv = $('call-local');
+  lv.srcObject = cs.localStream;
+  lv.classList.toggle('hidden', cs.type !== 'video' || cs.camOff);
+}
+function updateCallControls(){
+  const cs = callState;
+  if (!cs) return;
+  const m = $('btn-call-mute');
+  m.querySelector('.cc').innerHTML = cs.muted ? IC.micOff : IC.mic;
+  m.classList.toggle('off', cs.muted);
+  const sp = $('btn-call-speaker');
+  sp.querySelector('.cc').innerHTML = IC.speaker;
+  sp.classList.toggle('off', cs.speaker);
+  const c = $('btn-call-cam');
+  c.querySelector('.cc').innerHTML = cs.camOff ? IC.vidOff : IC.video;
+  c.classList.toggle('off', cs.camOff);
+  $('btn-call-end').querySelector('.cc').innerHTML = IC.phoneEnd;
+  $('btn-call-accept').querySelector('.cc').innerHTML = IC.phone;
+  $('btn-call-decline').querySelector('.cc').innerHTML = IC.phoneEnd;
+}
+function wireCalls(){
+  $('btn-call-end').onclick = () => endCall(true);
+  $('btn-call-accept').onclick = acceptCall;
+  $('btn-call-decline').onclick = declineCall;
+  $('btn-call-mute').onclick = () => {
+    const cs = callState; if (!cs || !cs.localStream) return;
+    cs.muted = !cs.muted;
+    cs.localStream.getAudioTracks().forEach(t => { t.enabled = !cs.muted; });
+    updateCallControls();
+  };
+  $('btn-call-speaker').onclick = async () => {
+    const cs = callState; if (!cs) return;
+    cs.speaker = !cs.speaker;
+    updateCallControls();
+    const v = $('call-remote');
+    if (v && typeof v.setSinkId === 'function' && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      try {
+        const outs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audiooutput');
+        const target = cs.speaker
+          ? outs.find(d => /speaker/i.test(d.label))
+          : (outs.find(d => d.deviceId === 'default') || outs[0]);
+        if (target) await v.setSinkId(target.deviceId);
+      } catch (e) {}
+    }
+  };
+  $('btn-call-cam').onclick = () => {
+    const cs = callState; if (!cs || !cs.localStream) return;
+    cs.camOff = !cs.camOff;
+    cs.localStream.getVideoTracks().forEach(t => { t.enabled = !cs.camOff; });
+    attachLocalPreview();
+    updateCallControls();
+  };
+}
+/* Ringtone (WebAudio two-tone, guarded — browsers may keep it suspended until a tap) */
+let ringCtx = null, ringInt = null;
+function startRing(){
+  stopRing();
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ringCtx = ringCtx || new AC();
+    if (ringCtx.state === 'suspended') ringCtx.resume();
+    const ring = () => {
+      if (!ringCtx) return;
+      const t0 = ringCtx.currentTime;
+      [0, 0.35].forEach(off => {
+        const o = ringCtx.createOscillator(), g = ringCtx.createGain();
+        o.type = 'sine'; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, t0 + off);
+        g.gain.exponentialRampToValueAtTime(0.12, t0 + off + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.28);
+        o.connect(g); g.connect(ringCtx.destination);
+        o.start(t0 + off); o.stop(t0 + off + 0.3);
+      });
+    };
+    ring();
+    ringInt = setInterval(ring, 2800);
+  } catch (e) {}
+}
+function stopRing(){ if (ringInt) { clearInterval(ringInt); ringInt = null; } }
+
+init();
+</script>
 </body>
 </html>
