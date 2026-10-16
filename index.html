@@ -48,10 +48,10 @@ img{display:block}
 .hidden{display:none!important}
 
 /* ---------- stage ---------- */
-#stage{position:relative;width:100%;max-width:430px;height:100dvh;margin:0 auto;background:var(--bg);overflow:hidden}
+#stage{position:relative;width:100%;max-width:430px;height:100%;height:100dvh;margin:0 auto;background:var(--bg);overflow:hidden}
 @media(min-width:480px){
   body{display:flex;align-items:center;justify-content:center}
-  #stage{height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
+  #stage{height:min(932px,100%);height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
 }
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
 .screen.over{animation:slideIn .26s var(--ease)}
@@ -274,13 +274,29 @@ img{display:block}
 
 /* ---------- profile ---------- */
 #screen-profile{z-index:30}
-.profile-scroll{flex:1;overflow-y:auto;padding:26px 22px 30px;display:flex;flex-direction:column;align-items:center}
+.profile-scroll{flex:1;overflow-y:auto;padding:0 0 30px;display:flex;flex-direction:column;align-items:center}
 .profile-scroll::-webkit-scrollbar{display:none}
-.profile-scroll .avatar.lg{box-shadow:0 0 0 5px var(--yellow)}
-.profile-comet{width:64px;height:64px;border-radius:18px;box-shadow:var(--shadow);margin-bottom:20px}
-.profile-name{font-size:25px;font-weight:800;margin:16px 0 2px;text-align:center}
+.profile-scroll .avatar.lg{box-shadow:0 0 0 5px #fff}
+.profile-banner{width:100%;height:168px;flex:none;background:var(--yellow);position:relative;overflow:hidden}
+.profile-banner img{width:100%;height:100%;object-fit:cover}
+.profile-banner .banner-comet{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:74px;height:74px;opacity:.4}
+.profile-body{width:100%;display:flex;flex-direction:column;align-items:center;padding:0 22px}
+.profile-av-overlap{margin-top:-52px;position:relative;z-index:2}
+.profile-name{font-size:25px;font-weight:800;margin:14px 0 2px;text-align:center}
 .profile-user{color:var(--ink2);font-size:15px;font-weight:600}
 .profile-email{color:var(--ink3);font-size:13.5px;margin-top:4px}
+#btn-edit-profile{margin-top:22px}
+#btn-user-edit{margin-top:22px}
+.edit-banner{position:relative;width:100%;height:118px;border-radius:16px;overflow:hidden;background:var(--yellow);cursor:pointer;flex:none}
+.edit-banner img{width:100%;height:100%;object-fit:cover}
+.edit-banner .edit-banner-lab{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);color:#fff;font-size:13px;font-weight:700;text-align:center;padding:7px}
+.edit-av-row{display:flex;align-items:center;gap:14px;margin-top:16px}
+.edit-av-row .avatar{width:64px;height:64px;font-size:27px}
+.edit-lab{display:block;font-size:14px;font-weight:800;color:var(--ink);margin:18px 0 7px}
+.edit-user-row{display:flex;align-items:center;background:var(--soft);border-radius:14px;padding:0 4px 0 16px}
+.edit-user-row span{font-size:16px;color:var(--ink2);font-weight:600}
+.edit-user-row input{flex:1;font-size:16px;padding:13px 6px;outline:none;min-width:0;background:none}
+.edit-hint{color:var(--ink2);font-size:13px;line-height:1.45;margin:8px 2px 0}
 .set-list{width:100%;margin-top:28px;border-top:1px solid var(--line)}
 .set-row{display:flex;align-items:center;gap:12px;width:100%;padding:16px 2px;border-bottom:1px solid var(--line);text-align:left;font-size:16px;font-weight:600}
 .set-row .lab{flex:1}
@@ -333,6 +349,18 @@ img{display:block}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ---------- update banner ---------- */
+#update-banner{
+  position:absolute;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;z-index:85;
+  background:var(--ink);color:#fff;border-radius:14px;padding:10px 10px 10px 16px;
+  display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);
+  animation:sheetUp .3s var(--ease);
+}
+#update-banner span{flex:1;font-size:14.5px;font-weight:700}
+#btn-update-now{background:var(--yellow);color:#fff;border-radius:999px;padding:8px 16px;font-weight:800;font-size:13.5px;flex:none;transition:transform .1s}
+#btn-update-now:active{transform:scale(.95)}
+#btn-update-dismiss{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.75);flex:none}
+#btn-update-dismiss svg{width:15px;height:15px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -377,16 +405,6 @@ img{display:block}
           <p class="big">No Chats Yet</p>
           <p class="dim">Tap the Add Friend icon up top and search for your people by username.</p>
         </div>
-      </div>
-    </div>
-
-    <!-- Map (placeholder pane) -->
-    <div id="view-map" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
-      <header class="app-head"><span style="width:38px"></span><div class="title"><img class="title-logo" src="assets/comet.png" alt="">Map</div><span style="width:38px"></span></header>
-      <div class="ph-wrap">
-        <div class="ph-ico" data-ico="pin"></div>
-        <h2>The Map Is Coming Soon</h2>
-        <p>Blip doesn't have a map yet. Your chats, camera, and stories all work right now.</p>
       </div>
     </div>
 
@@ -440,7 +458,6 @@ img{display:block}
 
     <!-- Bottom nav -->
     <nav id="tabbar">
-      <button class="tab" data-view="view-map"><span data-ico="pin"></span>Map</button>
       <button class="tab" data-view="view-chats"><span data-ico="chat"></span>Chat</button>
       <div class="tab-cam-wrap">
         <button class="tab-cam-btn" id="tab-cam" aria-label="Camera"><span data-ico="camera"></span></button>
@@ -478,21 +495,21 @@ img{display:block}
       <span style="width:38px"></span>
     </header>
     <div class="profile-scroll">
-      <img class="profile-comet" src="assets/comet.png" alt="Blip comet logo">
-      <span id="profile-avatar"></span>
-      <div class="profile-name" id="profile-name"></div>
-      <div class="profile-user" id="profile-username"></div>
-      <div class="profile-bio hidden" id="profile-bio"></div>
-      <div class="profile-email" id="profile-email"></div>
-      <div class="set-list">
-        <button class="set-row" id="set-photo"><span class="lab">Profile Photo</span><span style="color:var(--ink2);font-weight:500">Change</span><span data-ico="chev"></span></button>
-        <button class="set-row" id="set-bio"><span class="lab">Bio</span><span id="set-bio-val" style="color:var(--ink2);font-weight:500"></span><span data-ico="chev"></span></button>
-        <button class="set-row" id="set-name"><span class="lab">Display Name</span><span id="set-name-val" style="color:var(--ink2);font-weight:500"></span><span data-ico="chev"></span></button>
-        <button class="set-row" id="set-add"><span class="lab">Friends</span><span data-ico="chev"></span></button>
-        <button class="set-row danger" id="btn-signout"><span class="lab">Log Out</span></button>
+      <div class="profile-banner" id="profile-banner"></div>
+      <div class="profile-body">
+        <span id="profile-avatar" class="profile-av-overlap"></span>
+        <div class="profile-name" id="profile-name"></div>
+        <div class="profile-user" id="profile-username"></div>
+        <div class="profile-bio hidden" id="profile-bio"></div>
+        <div class="profile-email" id="profile-email"></div>
+        <button class="btn-block btn-yellow2" id="btn-edit-profile">Edit Profile</button>
+        <div class="set-list">
+          <button class="set-row" id="set-add"><span class="lab">Friends</span><span data-ico="chev"></span></button>
+          <button class="set-row" id="set-notifications"><span class="lab">Notifications</span><span id="set-notif-val" style="color:var(--ink2);font-weight:500">Enable Notifications</span><span data-ico="chev"></span></button>
+          <button class="set-row danger" id="btn-signout"><span class="lab">Log Out</span></button>
+        </div>
+        <p class="set-note">Tap Edit Profile to change your photo, banner, bio, display name, and username — it's all in one place.</p>
       </div>
-      <input id="file-avatar" type="file" accept="image/*" hidden>
-      <p class="set-note">Your display name can be changed one time — after that it's locked. Your username stays the same so friends can still find you.</p>
     </div>
   </div>
 
@@ -538,43 +555,48 @@ img{display:block}
       <span style="width:38px"></span>
     </header>
     <div class="profile-scroll">
-      <span id="user-avatar"></span>
-      <div class="profile-name" id="user-name"></div>
-      <div class="profile-user" id="user-username"></div>
-      <div class="profile-bio hidden" id="user-bio"></div>
-      <div class="vp-actions">
-        <button class="btn-block btn-ink" id="btn-user-message">Message</button>
-        <button class="btn-block btn-yellow2" id="btn-user-friend">Add Friend</button>
+      <div class="profile-banner" id="user-banner"></div>
+      <div class="profile-body">
+        <span id="user-avatar" class="profile-av-overlap"></span>
+        <div class="profile-name" id="user-name"></div>
+        <div class="profile-user" id="user-username"></div>
+        <div class="profile-bio hidden" id="user-bio"></div>
+        <div class="vp-actions">
+          <button class="btn-block btn-ink" id="btn-user-message">Message</button>
+          <button class="btn-block btn-yellow2" id="btn-user-friend">Add Friend</button>
+        </div>
+        <button class="btn-block btn-yellow2 hidden" id="btn-user-edit">Edit Profile</button>
       </div>
     </div>
   </div>
 
-  <!-- ============ BIO ============ -->
-  <div id="sheet-bio" class="overlay hidden">
+  <!-- ============ EDIT PROFILE ============ -->
+  <div id="sheet-edit" class="overlay hidden">
     <div class="sheet">
       <div class="grab"></div>
-      <h3>Edit Bio</h3>
-      <input id="bio-input" class="field-soft" type="text" maxlength="120" autocomplete="off" placeholder="Write something about you">
-      <p id="bio-error" class="error" style="text-align:left"></p>
-      <div class="stack">
-        <button class="btn-block btn-yellow2" id="btn-bio-save">Save Bio</button>
-        <button class="btn-block btn-ghost" id="btn-bio-cancel">Cancel</button>
+      <h3>Edit Profile</h3>
+      <div class="scroll">
+        <div class="edit-banner" id="edit-banner"><span class="edit-banner-lab">Change Banner</span></div>
+        <div class="edit-av-row">
+          <span id="edit-avatar"></span>
+          <button class="btn-mini" id="btn-edit-photo" type="button">Change Photo</button>
+        </div>
+        <label class="edit-lab" for="edit-name">Display Name</label>
+        <input id="edit-name" class="field-soft" type="text" maxlength="30" autocomplete="off" placeholder="Your display name">
+        <p class="edit-hint hidden" id="edit-name-locked">You've already used your one display name change, so this one's locked.</p>
+        <label class="edit-lab" for="edit-username">Username</label>
+        <div class="edit-user-row"><span>@</span><input id="edit-username" type="text" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="username"></div>
+        <p class="edit-hint">Letters, numbers, and underscores only. Friends find you by your @username, so they'll need the new one if you change it.</p>
+        <label class="edit-lab" for="edit-bio">Bio</label>
+        <input id="edit-bio" class="field-soft" type="text" maxlength="120" autocomplete="off" placeholder="Write something about you">
+        <p id="edit-error" class="error" style="text-align:left"></p>
       </div>
-    </div>
-  </div>
-
-  <!-- ============ NAME CHANGE ============ -->
-  <div id="sheet-name" class="overlay hidden">
-    <div class="sheet">
-      <div class="grab"></div>
-      <h3>Change Display Name</h3>
-      <input id="name-input" class="field-soft" type="text" maxlength="30" autocomplete="off">
-      <p class="set-note" style="margin-top:12px">You can only do this once, so make it count. Friends will see the new name everywhere in Blip.</p>
-      <p id="name-error" class="error" style="text-align:left"></p>
       <div class="stack">
-        <button class="btn-block btn-yellow2" id="btn-name-save">Save New Name</button>
-        <button class="btn-block btn-ghost" id="btn-name-cancel">Cancel</button>
+        <button class="btn-block btn-yellow2" id="btn-edit-save">Save Changes</button>
+        <button class="btn-block btn-ghost" id="btn-edit-cancel">Cancel</button>
       </div>
+      <input id="file-avatar" type="file" accept="image/*" hidden>
+      <input id="file-banner" type="file" accept="image/*" hidden>
     </div>
   </div>
 
@@ -586,8 +608,8 @@ img{display:block}
     <div class="fs-top">
       <div class="segbar" id="story-progress"></div>
       <div class="fs-who">
-        <span id="story-avatar"></span>
-        <span><b id="story-who"></b><br><span id="story-when"></span></span>
+        <span id="story-avatar" style="cursor:pointer"></span>
+        <span id="story-who-wrap" style="cursor:pointer"><b id="story-who"></b><br><span id="story-when"></span></span>
         <span class="sp"></span>
         <button class="fs-x hidden" id="btn-story-del" aria-label="Delete story"></button>
         <button class="fs-x" id="btn-story-close" aria-label="Close"></button>
@@ -634,6 +656,12 @@ img{display:block}
       <button class="call-ctl" id="btn-call-decline"><span class="cc decline"></span><small>Decline</small></button>
       <button class="call-ctl" id="btn-call-accept"><span class="cc accept"></span><small>Accept</small></button>
     </div>
+  </div>
+
+  <div id="update-banner" class="hidden">
+    <span>Update Available</span>
+    <button id="btn-update-now" type="button">Update</button>
+    <button id="btn-update-dismiss" type="button" aria-label="Dismiss"></button>
   </div>
 
   <div id="toast"></div>
@@ -701,6 +729,7 @@ setIco($('btn-thread-send'), 'send'); setIco($('btn-thread-cam'), 'camera');
 setIco($('btn-flip'), 'flip'); setIco($('btn-flash'), 'boltOff');
 setIco($('btn-cam-search'), 'search'); setIco($('btn-add-cam'), 'addUser');
 setIco($('btn-story-close'), 'x'); setIco($('btn-photo-close'), 'x'); setIco($('btn-story-del'), 'trash');
+setIco($('btn-update-dismiss'), 'x');
 
 /* ---------- state ---------- */
 let me = null;
@@ -767,6 +796,14 @@ function markOpened(otherId){
 /* ---------- auth ---------- */
 async function init(){
   wireAuth(); wireNav(); wireProfile(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls();
+  // The service worker asks us to re-subscribe when the push service rotates
+  // our subscription ('pushsubscriptionchange').
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'blip-resubscribe') refreshPushSubscription();
+    });
+  }
+  checkForUpdate();
   // Only the splash is visible while we check for an existing session —
   // a signed-in user goes straight into the app with no login flash.
   if (!sb) { const ok = await loadSupabaseLib(); if (ok) makeClient(); }
@@ -849,6 +886,7 @@ async function enterApp(user){
   loadChats(); loadStories();
   subscribeRealtime();
   subscribeCallInbox();
+  refreshPushSubscription();
 }
 function refreshMyAvatars(){
   const html = avatarHTML(me, 'mini-avatar');
@@ -868,7 +906,7 @@ function wireNav(){
 function switchView(v){
   activeView = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
-  ['view-chats','view-map','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
+  ['view-chats','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
   if (v === 'view-camera') startCamera(); else stopCamera();
   if (v === 'view-chats') loadChats();
   if (v === 'view-stories') loadStories();
@@ -878,18 +916,24 @@ function switchView(v){
 function wireProfile(){
   $('btn-profile-back').onclick = () => hide($('screen-profile'));
   $('set-add').onclick = () => { hide($('screen-profile')); openFriends(); };
-  $('set-name').onclick = openNameSheet;
-  $('btn-name-cancel').onclick = () => hide($('sheet-name'));
-  $('btn-name-save').onclick = saveName;
-  $('set-photo').onclick = () => $('file-avatar').click();
+  $('btn-edit-profile').onclick = openEditProfile;
+  $('btn-edit-cancel').onclick = () => hide($('sheet-edit'));
+  $('btn-edit-save').onclick = saveEditProfile;
+  $('sheet-edit').addEventListener('click', (e) => { if (e.target === $('sheet-edit')) hide($('sheet-edit')); });
+  $('edit-banner').onclick = () => $('file-banner').click();
+  $('btn-edit-photo').onclick = () => $('file-avatar').click();
   $('file-avatar').onchange = onAvatarFile;
-  $('set-bio').onclick = openBioSheet;
-  $('btn-bio-cancel').onclick = () => hide($('sheet-bio'));
-  $('btn-bio-save').onclick = saveBio;
-  $('sheet-bio').addEventListener('click', (e) => { if (e.target === $('sheet-bio')) hide($('sheet-bio')); });
+  $('file-banner').onchange = onBannerFile;
+  $('set-notifications').onclick = () => enableNotifications();
   $('btn-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 }
+/* Banner strip: the user's cover image, or the comet on Blip blue when unset. */
+function bannerHTML(p){
+  if (p && p.banner_url) return '<img src="' + esc(p.banner_url) + '" alt="">';
+  return '<img class="banner-comet" src="assets/comet-clear.png" alt="">';
+}
 function openProfile(){
+  $('profile-banner').innerHTML = bannerHTML(me);
   $('profile-avatar').innerHTML = avatarHTML(me, 'lg');
   $('profile-name').textContent = me.display_name;
   $('profile-username').textContent = '@' + me.username;
@@ -897,74 +941,106 @@ function openProfile(){
   bioEl.textContent = me.bio || '';
   bioEl.classList.toggle('hidden', !me.bio);
   $('profile-email').textContent = me.email || '';
-  $('set-name-val').textContent = me.display_name;
-  $('set-bio-val').textContent = me.bio ? (me.bio.length > 18 ? me.bio.slice(0, 18) + '…' : me.bio) : 'Add a Bio';
+  updateNotifRow();
   show($('screen-profile'));
 }
-/* Profile photo: downscale, upload to blip-media, save URL on blip_profiles.avatar_url */
-async function onAvatarFile(e){
-  const f = e.target.files[0]; e.target.value = '';
-  if (!f) return;
-  toast('Uploading Photo…');
-  let blob = f;
+/* Profile images: downscale, upload to blip-media, save the URL on
+   blip_profiles (avatar_url for the photo, banner_url for the cover). */
+async function downscaleImage(f, maxDim){
   try {
     const img = new Image();
     img.src = URL.createObjectURL(f);
     await img.decode();
     const c = document.createElement('canvas');
-    const s = Math.min(1, 512 / Math.max(img.width, img.height));
+    const s = Math.min(1, maxDim / Math.max(img.width, img.height));
     c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    blob = (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85))) || f;
-  } catch (err) {}
-  const path = me.id + '/avatar-' + Date.now() + '.jpg';
+    return (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85))) || f;
+  } catch (err) { return f; }
+}
+async function saveProfileImage(blob, kind){
+  const path = me.id + '/' + kind + '-' + Date.now() + '.jpg';
   const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
-  if (error) { toast('Upload failed: ' + error.message); return; }
+  if (error) { toast('Upload failed: ' + error.message); return false; }
   const url = sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
-  const { error: uErr } = await sb.from('blip_profiles').update({ avatar_url: url }).eq('id', me.id);
-  if (uErr) { toast('Could not save photo: ' + uErr.message); return; }
-  me.avatar_url = url;
-  profilesCache[me.id] = { ...profilesCache[me.id], avatar_url: url };
-  openProfile(); refreshMyAvatars();
-  toast('Profile Photo Updated');
+  const patch = kind === 'banner' ? { banner_url: url } : { avatar_url: url };
+  const { error: uErr } = await sb.from('blip_profiles').update(patch).eq('id', me.id);
+  if (uErr) { toast('Could not save: ' + uErr.message); return false; }
+  if (kind === 'banner') me.banner_url = url; else me.avatar_url = url;
+  profilesCache[me.id] = { ...profilesCache[me.id], ...patch };
+  return true;
 }
-function openBioSheet(){
-  $('bio-error').textContent = '';
-  $('bio-input').value = me.bio || '';
-  show($('sheet-bio'));
-  setTimeout(() => $('bio-input').focus(), 60);
+async function onAvatarFile(e){
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  toast('Uploading Photo…');
+  const blob = await downscaleImage(f, 512);
+  if (await saveProfileImage(blob, 'avatar')) {
+    openProfile(); refreshMyAvatars(); refreshEditSheet();
+    toast('Profile Photo Updated');
+  }
 }
-async function saveBio(){
-  const raw = $('bio-input').value.trim();
-  $('btn-bio-save').disabled = true;
-  const { error } = await sb.from('blip_profiles').update({ bio: raw || null }).eq('id', me.id);
-  $('btn-bio-save').disabled = false;
-  if (error) { $('bio-error').textContent = error.message; return; }
-  me.bio = raw;
-  profilesCache[me.id] = { ...profilesCache[me.id], bio: raw };
-  hide($('sheet-bio')); openProfile();
-  toast('Bio Updated');
+async function onBannerFile(e){
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  toast('Uploading Banner…');
+  const blob = await downscaleImage(f, 1280);
+  if (await saveProfileImage(blob, 'banner')) {
+    openProfile(); refreshEditSheet();
+    toast('Banner Updated');
+  }
 }
-function openNameSheet(){
-  $('name-error').textContent = '';
-  if (nameChanged) { toast("You've already used your one name change."); return; }
-  $('name-input').value = me.display_name;
-  show($('sheet-name'));
-  setTimeout(() => $('name-input').focus(), 60);
+/* ---------- Edit Profile sheet: photo, banner, name, username, bio ---------- */
+function openEditProfile(){
+  $('edit-error').textContent = '';
+  $('edit-name').value = me.display_name || '';
+  $('edit-name').disabled = nameChanged;
+  $('edit-name-locked').classList.toggle('hidden', !nameChanged);
+  $('edit-username').value = me.username || '';
+  $('edit-bio').value = me.bio || '';
+  refreshEditSheet();
+  show($('sheet-edit'));
 }
-async function saveName(){
-  const raw = $('name-input').value.trim();
-  if (raw.length < 2) { $('name-error').textContent = 'Name is too short.'; return; }
-  if (raw === me.display_name) { hide($('sheet-name')); return; }
-  $('btn-name-save').disabled = true;
-  const { error } = await sb.from('blip_profiles').update({ display_name: raw }).eq('id', me.id);
-  $('btn-name-save').disabled = false;
-  if (error) { $('name-error').textContent = error.message; return; }
-  me.display_name = raw;
-  profilesCache[me.id] = { ...profilesCache[me.id], display_name: raw };
-  nameChanged = true; saveLocal();
-  hide($('sheet-name')); openProfile(); refreshMyAvatars();
-  toast('Display Name Updated');
+function refreshEditSheet(){
+  $('edit-banner').innerHTML = bannerHTML(me) + '<span class="edit-banner-lab">Change Banner</span>';
+  $('edit-avatar').innerHTML = avatarHTML(me, 'md');
+}
+async function saveEditProfile(){
+  const errEl = $('edit-error');
+  errEl.textContent = '';
+  const newName = $('edit-name').value.trim();
+  const newUser = $('edit-username').value.trim().toLowerCase().replace(/\s+/g, '');
+  const newBio = $('edit-bio').value.trim();
+  const patch = {};
+  if (!nameChanged && newName !== (me.display_name || '')) {
+    if (newName.length < 2) { errEl.textContent = 'Display name is too short.'; return; }
+    patch.display_name = newName;
+  }
+  if (newUser !== (me.username || '')) {
+    if (!/^[a-z0-9_]{3,30}$/.test(newUser)) {
+      errEl.textContent = 'Username needs 3–30 letters, numbers, or underscores.';
+      return;
+    }
+    patch.username = newUser;
+  }
+  if (newBio !== (me.bio || '')) patch.bio = newBio || null;
+  if (!Object.keys(patch).length) { hide($('sheet-edit')); return; }
+  $('btn-edit-save').disabled = true;
+  const { error } = await sb.from('blip_profiles').update(patch).eq('id', me.id);
+  $('btn-edit-save').disabled = false;
+  if (error) {
+    errEl.textContent = (error.code === '23505' || /duplicate|unique/i.test(error.message || ''))
+      ? 'That username is taken — try another.'
+      : error.message;
+    return;
+  }
+  const didName = !!patch.display_name;
+  Object.assign(me, patch);
+  if (patch.bio === null) me.bio = '';
+  profilesCache[me.id] = { ...profilesCache[me.id], ...patch };
+  if (didName) { nameChanged = true; saveLocal(); }
+  hide($('sheet-edit')); openProfile(); refreshMyAvatars();
+  toast('Profile Updated');
 }
 
 /* ---------- friends (blip_friends) ---------- */
@@ -983,6 +1059,7 @@ function wireFriends(){
   });
   $('friend-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doFriendSearch(); } });
   $('btn-user-back').onclick = () => hide($('screen-user'));
+  $('btn-user-edit').onclick = () => { hide($('screen-user')); openProfile(); openEditProfile(); };
   $('btn-user-message').onclick = () => {
     const p = viewUser;
     hide($('screen-user')); hide($('screen-friends'));
@@ -1087,15 +1164,18 @@ async function doFriendSearch(){
 /* ---------- viewable user profile ---------- */
 function openUserProfile(p){
   if (!p) return;
-  if (me && p.id === me.id) { openProfile(); return; }
   viewUser = p;
+  const isMe = !!(me && p.id === me.id);
+  $('user-banner').innerHTML = bannerHTML(p);
   $('user-avatar').innerHTML = avatarHTML(p, 'lg');
   $('user-name').textContent = p.display_name || p.username;
   $('user-username').textContent = '@' + p.username;
   const bioEl = $('user-bio');
   bioEl.textContent = p.bio || '';
   bioEl.classList.toggle('hidden', !p.bio);
-  renderUserFriendBtn();
+  document.querySelector('#screen-user .vp-actions').classList.toggle('hidden', isMe);
+  $('btn-user-edit').classList.toggle('hidden', !isMe);
+  if (!isMe) renderUserFriendBtn();
   show($('screen-user'));
 }
 function renderUserFriendBtn(){
@@ -1154,10 +1234,11 @@ async function loadChats(){
     const snippet = m.image_url ? '' : ' · ' + esc((m.body || '').slice(0, 42));
     const r = document.createElement('div');
     r.className = 'chat-row';
-    r.innerHTML = avatarHTML(t.other, 'md') +
+    r.innerHTML = '<span class="chat-av">' + avatarHTML(t.other, 'md') + '</span>' +
       '<div class="row-main"><div class="row-name' + (st.unread ? ' unread' : '') + '">' + esc(t.other.display_name) + '</div>' +
       '<div class="row-status"><span class="dot" style="background:' + st.dot + '"></span><span class="' + st.cls + '">' + st.label + '</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500">' + snippet + '</span></div></div>' +
       (st.unread ? '<span class="unread-dot"></span>' : '');
+    r.querySelector('.chat-av').onclick = (e) => { e.stopPropagation(); openUserProfile(t.other); };
     r.onclick = () => openThread(t.other);
     list.appendChild(r);
   });
@@ -1186,6 +1267,7 @@ function closeThread(){
 async function openThread(other){
   threadOther = other;
   markOpened(other.id);
+  clearChatNotifications(other.id);
   $('thread-name').textContent = other.display_name;
   $('thread-user').textContent = '@' + other.username;
   $('thread-avatar').innerHTML = avatarHTML(other, 'sm');
@@ -1384,7 +1466,6 @@ async function uploadImage(blob){
 function wireSendSheet(){
   $('btn-send-cancel').onclick = () => hide($('sheet-send'));
   $('sheet-send').addEventListener('click', (e) => { if (e.target === $('sheet-send')) hide($('sheet-send')); });
-  $('sheet-name').addEventListener('click', (e) => { if (e.target === $('sheet-name')) hide($('sheet-name')); });
 }
 async function openSendSheet(imageUrl){
   $('send-preview').src = imageUrl;
@@ -1421,6 +1502,9 @@ async function openSendSheet(imageUrl){
 
 /* ---------- stories ---------- */
 function wireStories(){
+  const openStoryProfile = () => { const who = storyState.who; closeStoryViewer(); if (who) openUserProfile(who); };
+  $('story-avatar').onclick = openStoryProfile;
+  $('story-who-wrap').onclick = openStoryProfile;
   $('btn-story-close').onclick = closeStoryViewer;
   $('story-tap-right').onclick = () => { if (storyState.idx + 1 < storyState.items.length) { storyState.idx++; renderStorySeg(); } else closeStoryViewer(); };
   $('story-tap-left').onclick = () => { if (storyState.idx > 0) { storyState.idx--; renderStorySeg(); } };
@@ -1471,6 +1555,7 @@ async function loadStories(){
       '<div class="sc-who">' + avatarHTML(p, 'sm') + '<b>' + esc(p.display_name) + '</b></div>' +
       '<div class="sc-when">' + relTime(latest.created_at) + ' ago</div>' +
       (stories.length > 1 ? '<div class="sc-count">' + stories.length + ' Stories</div>' : '');
+    card.querySelector('.sc-who').onclick = (e) => { e.stopPropagation(); openUserProfile(p); };
     card.onclick = () => openStoryViewer(p, [...stories].reverse());
     grid.appendChild(card);
   });
@@ -1659,6 +1744,7 @@ async function startCall(type){
     kind: 'invite', fromId: me.id, fromName: me.display_name, fromUsername: me.username,
     callType: type, offer: pc.localDescription
   });
+  sendCallPush(other, type); // wake the callee with a push too (app may be closed)
   setCallStatus('Ringing…');
   const cs = callState;
   cs.ringTimeout = setTimeout(() => {
@@ -1733,6 +1819,7 @@ function cleanupCall(){
   if (lv) lv.srcObject = null;
   const av = $('call-avatar'); if (av) av.style.display = '';
   hide($('screen-call'));
+  maybeShowUpdateBanner(); // an update found mid-call is only shown now
 }
 function fmtDur(s){ return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function setCallStatus(t){ $('call-status').textContent = t; }
@@ -1830,6 +1917,130 @@ function startRing(){
   } catch (e) {}
 }
 function stopRing(){ if (ringInt) { clearInterval(ringInt); ringInt = null; } }
+
+/* ---------- push notifications (Web Push, service worker in assets/sw.js) ---------- */
+const VAPID_PUBLIC_KEY = 'BDMq8L6x0l4s7MPTQAqx_JC6Qzpv6LhlpnqdQtA6TpIKoTdy94-6TPlrwd6freB8fAeSp8q5End2v_vEE_rjva8';
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function pushSupported(){
+  return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+}
+async function savePushSubscription(sub){
+  if (!sb || !me || !sub) return;
+  const j = sub.toJSON();
+  if (!j.endpoint || !j.keys || !j.keys.p256dh || !j.keys.auth) return;
+  const row = { user_id: me.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth };
+  try {
+    const { error } = await sb.from('blip_push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+    if (error) await sb.from('blip_push_subscriptions').insert(row);
+  } catch (e) {}
+}
+async function subscribePush(){
+  const reg = await navigator.serviceWorker.register('./assets/sw.js');
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+  }
+  await savePushSubscription(sub);
+  return sub;
+}
+/* Runs only from the Settings tap — iOS requires a user gesture before the
+   permission prompt can appear. */
+async function enableNotifications(){
+  if (!pushSupported()) { toast('Notifications are not supported on this device'); return; }
+  if (!me) { toast('Log in first'); return; }
+  let perm = Notification.permission;
+  if (perm === 'default') {
+    try { perm = await Notification.requestPermission(); } catch (e) {}
+  }
+  if (perm !== 'granted') {
+    toast(perm === 'denied' ? 'Notifications are blocked — turn them on in Settings' : 'Notifications not enabled');
+    updateNotifRow();
+    return;
+  }
+  try {
+    await subscribePush();
+    toast('Notifications On');
+  } catch (e) { toast('Could not enable notifications'); }
+  updateNotifRow();
+}
+/* Silent refresh on launch when permission was already granted — also how a
+   rotated subscription gets re-saved after 'pushsubscriptionchange'. */
+async function refreshPushSubscription(){
+  if (!pushSupported() || !me) return;
+  if (Notification.permission !== 'granted') return;
+  try { await subscribePush(); } catch (e) {}
+}
+function updateNotifRow(){
+  const val = $('set-notif-val');
+  if (!val) return;
+  if (!pushSupported()) { val.textContent = 'Not Supported'; return; }
+  if (Notification.permission === 'granted') val.textContent = 'On';
+  else if (Notification.permission === 'denied') val.textContent = 'Off';
+  else val.textContent = 'Enable Notifications';
+}
+/* Opening a thread clears that chat's (and caller's) stacked notifications. */
+async function clearChatNotifications(otherId){
+  if (!('serviceWorker' in navigator) || !otherId) return;
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      const notes = await reg.getNotifications();
+      notes.forEach(n => {
+        const d = n.data || {};
+        if ((n.tag && n.tag.indexOf(otherId) !== -1) ||
+            d.chat_id === otherId || d.sender_id === otherId ||
+            d.caller_id === otherId || d.receiver_id === otherId) n.close();
+      });
+    }
+  } catch (e) {}
+}
+/* Ping the push sender when a call starts, so the callee is notified even
+   with Blip closed. Fire-and-forget, alongside the Realtime invite. */
+async function sendCallPush(other, type){
+  try {
+    const { data } = await sb.auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    if (!token) return;
+    await fetch(SUPABASE_URL + '/functions/v1/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ kind: 'call', receiver_id: other.id, caller_name: me.display_name, call_kind: type })
+    });
+  } catch (e) {}
+}
+
+/* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
+const BLIP_VERSION = '2026.10.16.1520';
+let updateAvailable = false;
+let updateDismissed = false;
+async function checkForUpdate(){
+  try {
+    const res = await fetch('./assets/version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const j = await res.json();
+    if (j && j.version && String(j.version) !== BLIP_VERSION) {
+      updateAvailable = true;
+      maybeShowUpdateBanner();
+    }
+  } catch (e) {}
+}
+function maybeShowUpdateBanner(){
+  if (!updateAvailable || updateDismissed) return;
+  if (callState) return; // never interrupt an active call — shown when it ends
+  show($('update-banner'));
+}
+$('btn-update-now').onclick = () => { if (!callState) location.reload(); };
+$('btn-update-dismiss').onclick = () => { updateDismissed = true; hide($('update-banner')); };
 
 init();
 </script>
