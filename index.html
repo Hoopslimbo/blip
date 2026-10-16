@@ -48,10 +48,12 @@ img{display:block}
 .hidden{display:none!important}
 
 /* ---------- stage ---------- */
-#stage{position:relative;width:100%;max-width:430px;height:100%;height:100dvh;margin:0 auto;background:var(--bg);overflow:hidden}
+/* Pinned to the real viewport edges: a percentage/dvh height can come up
+   short of the actual screen in a phone webview and leave a bare strip of
+   page background showing along the bottom (the "white bar"). */
+#stage{position:fixed;inset:0;width:100%;max-width:430px;margin:0 auto;background:var(--bg);overflow:hidden}
 @media(min-width:480px){
-  body{display:flex;align-items:center;justify-content:center}
-  #stage{height:min(932px,100%);height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
+  #stage{inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
 }
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
 .screen.over{animation:slideIn .26s var(--ease)}
@@ -161,6 +163,18 @@ img{display:block}
 .btn-mini.remove{background:var(--soft);color:var(--danger)}
 .profile-bio{color:var(--ink2);font-size:15px;line-height:1.45;text-align:center;margin-top:10px;max-width:300px;white-space:pre-wrap;word-break:break-word}
 .vp-actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:28px}
+.btn-soft{background:var(--soft);color:var(--ink)}
+.vp-call-row{display:flex;gap:10px}
+.vp-call-row .btn-block{flex:1;display:flex;align-items:center;justify-content:center;gap:8px}
+.vp-call-row .btn-block svg{width:19px;height:19px}
+
+/* ---------- friend quick actions ---------- */
+.f-actions{display:flex;gap:8px;flex:none;align-items:center}
+.f-act{width:42px;height:42px;border-radius:50%;background:var(--soft);color:var(--ink);display:flex;align-items:center;justify-content:center;transition:transform .1s,background .15s}
+.f-act svg{width:21px;height:21px}
+.f-act:active{transform:scale(.9);background:var(--line)}
+.f-act.msg{background:var(--yellow);color:#fff}
+.f-act.msg:active{background:var(--yellow)}
 
 /* ---------- bottom nav ---------- */
 #tabbar{
@@ -538,11 +552,11 @@ img{display:block}
       <input id="friend-search" class="field-soft" type="text" placeholder="Search by username" maxlength="30" autocomplete="off">
       <p id="friend-error" class="error" style="text-align:left"></p>
       <div id="friend-results" style="margin-top:4px"></div>
-      <div class="sec-label" style="padding:18px 0 8px">My Friends</div>
+      <div class="sec-label" id="friends-label" style="padding:18px 0 8px">My Friends</div>
       <div id="friend-list"></div>
       <div id="friends-empty" class="empty hidden" style="padding:34px 20px">
         <p class="big">No Friends Yet</p>
-        <p class="dim">Search by username above to find and add your people.</p>
+        <p class="dim">Search by username above to find and add your people — then message, call, or video them right from here.</p>
       </div>
     </div>
   </div>
@@ -563,6 +577,10 @@ img{display:block}
         <div class="profile-bio hidden" id="user-bio"></div>
         <div class="vp-actions">
           <button class="btn-block btn-ink" id="btn-user-message">Message</button>
+          <div class="vp-call-row">
+            <button class="btn-block btn-soft" id="btn-user-call"><span data-ico="phone"></span>Call</button>
+            <button class="btn-block btn-soft" id="btn-user-video"><span data-ico="video"></span>Video</button>
+          </div>
           <button class="btn-block btn-yellow2" id="btn-user-friend">Add Friend</button>
         </div>
         <button class="btn-block btn-yellow2 hidden" id="btn-user-edit">Edit Profile</button>
@@ -1065,6 +1083,8 @@ function wireFriends(){
     hide($('screen-user')); hide($('screen-friends'));
     if (p) openThread(p);
   };
+  $('btn-user-call').onclick = () => { if (viewUser) startCall('audio', viewUser); };
+  $('btn-user-video').onclick = () => { if (viewUser) startCall('video', viewUser); };
   $('btn-user-friend').onclick = async () => {
     if (!viewUser) return;
     if (friendIds.has(viewUser.id)) await removeFriend(viewUser.id);
@@ -1122,12 +1142,25 @@ function renderFriendList(){
   const friends = [...friendIds].map(id => profilesCache[id]).filter(Boolean)
     .sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || '')));
   $('friends-empty').classList.toggle('hidden', friends.length > 0);
+  $('friends-label').textContent = 'My Friends' + (friends.length ? ' (' + friends.length + ')' : '');
   friends.forEach(p => {
     const r = personRow(p);
-    const rm = document.createElement('button');
-    rm.className = 'btn-mini remove'; rm.textContent = 'Remove';
-    rm.onclick = async (e) => { e.stopPropagation(); if (await removeFriend(p.id)) renderFriendList(); };
-    r.appendChild(rm);
+    const name = p.display_name || 'Friend';
+    const acts = document.createElement('div');
+    acts.className = 'f-actions';
+    const mkAct = (ico, label, cls, fn) => {
+      const b = document.createElement('button');
+      b.className = 'f-act' + (cls ? ' ' + cls : '');
+      b.setAttribute('aria-label', label);
+      b.innerHTML = IC[ico];
+      b.onclick = (e) => { e.stopPropagation(); fn(); };
+      return b;
+    };
+    // One tap each: open the conversation, start a voice call, or FaceTime.
+    acts.appendChild(mkAct('chat', 'Message ' + name, 'msg', () => { hide($('screen-friends')); openThread(p); }));
+    acts.appendChild(mkAct('phone', 'Call ' + name, '', () => startCall('audio', p)));
+    acts.appendChild(mkAct('video', 'Video call ' + name, '', () => startCall('video', p)));
+    r.appendChild(acts);
     r.onclick = () => openUserProfile(p);
     list.appendChild(r);
   });
@@ -1716,10 +1749,10 @@ function makePC(otherId){
   };
   return pc;
 }
-async function startCall(type){
-  if (!threadOther || !sb) return;
+async function startCall(type, target){
+  const other = target || threadOther;
+  if (!other || !sb) return;
   if (callState) { toast('Already in a Call'); return; }
-  const other = threadOther;
   stopCamera(); // free the camera/mic for the call
   callState = freshCall({ mode: 'out', type, other, speaker: type === 'video' });
   showCallScreen();
@@ -2020,7 +2053,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.16.1520';
+const BLIP_VERSION = '2026.10.16.1905';
 let updateAvailable = false;
 let updateDismissed = false;
 async function checkForUpdate(){
