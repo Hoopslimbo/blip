@@ -43,8 +43,8 @@ try {
   --danger:#e72b4e;
   --shadow:0 10px 34px rgba(15,16,20,.16);
   --ease:cubic-bezier(.22,.9,.32,1);
-  --tabbar-pad:max(8px,env(safe-area-inset-bottom) - 16px);
-  --tabbar-h:calc(44px + var(--tabbar-pad));
+  --tabbar-pad:max(6px,env(safe-area-inset-bottom) - 22px);
+  --tabbar-h:calc(52px + var(--tabbar-pad));
   --head-h:calc(56px + env(safe-area-inset-top));
 }
 /* ---------- themes ----------
@@ -299,17 +299,19 @@ img{display:block}
   height:var(--tabbar-h);padding-bottom:var(--tabbar-pad);
   display:flex;align-items:stretch;background:var(--bg);border-top:1px solid var(--line);flex:none;
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--ink3);font-size:10px;font-weight:700}
-.tab svg{width:23px;height:23px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink3);font-size:11px;font-weight:700}
+.tab [data-ico]{display:flex;line-height:0}
+.tab svg{width:27px;height:27px}
 .tab.active{color:var(--yellow)}
 .tab-cam-btn{
   position:absolute;left:50%;top:0;transform:translate(-50%,-50%);
-  width:52px;height:52px;border-radius:50%;background:var(--yellow);
+  width:56px;height:56px;border-radius:50%;background:var(--yellow);
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 4px 14px rgba(0,0,0,.18);border:3px solid var(--bg);color:#000;transition:transform .12s;
 }
 .tab-cam-btn:active{transform:translate(-50%,-50%) scale(.93)}
-.tab-cam-btn svg{width:25px;height:25px}
+.tab-cam-btn [data-ico]{display:flex;line-height:0}
+.tab-cam-btn svg{width:27px;height:27px}
 .tab-cam-wrap{flex:1;position:relative}
 
 /* ---------- camera ---------- */
@@ -2513,6 +2515,13 @@ function updateEditorTools(){
   $('btn-edit-undo').disabled = !es || !es.strokes.length;
   renderEditColors();
 }
+/* Taps on the editor's tool buttons must never blur the text being
+   typed in place: the editable overlay's blur ends the inline edit and
+   scraps the text outright if it is still empty — so a font tap used to
+   throw the user back to the plain editor, text and font row gone, with
+   nothing applied. Canceling pointerdown keeps focus (and the keyboard)
+   in the text; the button's click still fires and does the work. */
+function keepTextFocus(b){ b.addEventListener('pointerdown', (e) => { e.preventDefault(); }); }
 function renderEditColors(){
   const es = editState, row = $('edit-colors');
   const showRow = !!es && (es.drawing || !!es.selected);
@@ -2526,6 +2535,7 @@ function renderEditColors(){
     b.className = 'swatch' + (c === activeColor ? ' on' : '');
     b.style.background = c;
     b.setAttribute('aria-label', 'Color');
+    keepTextFocus(b);
     b.onclick = () => {
       if (es.drawing) es.penColor = c;
       if (es.selected) { es.selected.color = c; layoutEditText(es.selected); }
@@ -2536,6 +2546,7 @@ function renderEditColors(){
   if (es.selected) {
     const styleBtn = document.createElement('button');
     styleBtn.className = 'edit-tool-btn'; styleBtn.textContent = 'Style';
+    keepTextFocus(styleBtn);
     styleBtn.onclick = () => {
       const t = es.selected;
       if (!t) return;
@@ -2546,6 +2557,7 @@ function renderEditColors(){
     row.appendChild(styleBtn);
     const delBtn = document.createElement('button');
     delBtn.className = 'edit-tool-btn'; delBtn.innerHTML = IC.trash + '<span>Delete</span>';
+    keepTextFocus(delBtn);
     delBtn.onclick = () => { if (es.selected) removeEditText(es.selected); };
     row.appendChild(delBtn);
   }
@@ -2563,6 +2575,7 @@ function renderEditFonts(){
     b.style.fontFamily = f.css;
     b.style.fontWeight = f.weight;
     b.setAttribute('aria-label', 'Font ' + f.id);
+    keepTextFocus(b);
     b.onclick = () => { if (!es.selected) return; es.selected.font = f.id; layoutEditText(es.selected); renderEditFonts(); };
     row.appendChild(b);
   });
@@ -3513,7 +3526,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.1500';
+const BLIP_VERSION = '2026.10.17.1945';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
