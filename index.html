@@ -16,12 +16,23 @@
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
 <link rel="manifest" href="assets/manifest.webmanifest">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<script>
+/* Apply the saved theme before first paint so the app never flashes the
+   wrong colors. The choice lives on this device (see applyTheme). */
+try {
+  var savedTheme = localStorage.getItem('blip_theme');
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+} catch (e) {}
+</script>
 <style>
 :root{
+  color-scheme:light;
   --yellow:#1e90ff;
   --ink:#0f1014;
   --ink2:#656d78;
   --ink3:#68727f;
+  --inkbtn:#0f1014;
+  --inkbtn-fg:#ffffff;
   --line:#ececf0;
   --bg:#ffffff;
   --sheet:#ffffff;
@@ -35,11 +46,77 @@
   --tabbar-h:calc(42px + env(safe-area-inset-bottom));
   --head-h:calc(56px + env(safe-area-inset-top));
 }
+/* ---------- themes ----------
+   Picked in Settings > Appearance and applied as data-theme on <html>.
+   Every themed surface reads the variables above, so a theme is just a
+   palette swap. "light" is the :root default (no overrides needed).
+   --yellow is the accent: it recolors the splash/auth screens, the
+   banner, buttons, the story ring, and the raised camera tab. */
+[data-theme="dark"]{
+  color-scheme:dark;
+  --yellow:#1e90ff;
+  --ink:#f4f6fa;
+  --ink2:#a9b2c1;
+  --ink3:#828da0;
+  --inkbtn:#f4f6fa;
+  --inkbtn-fg:#10131a;
+  --line:#262b38;
+  --bg:#101218;
+  --sheet:#161922;
+  --soft:#1e222d;
+  --chat:#0fadff;
+  --photo:#1e90ff;
+  --shadow:0 10px 34px rgba(0,0,0,.55);
+}
+[data-theme="sunset"]{
+  --yellow:#ff6a3d;
+  --ink:#2a1710;
+  --ink2:#7d5a4c;
+  --ink3:#a37f6d;
+  --inkbtn:#2a1710;
+  --line:#f4ddcd;
+  --bg:#fffaf5;
+  --sheet:#fffaf5;
+  --soft:#fdeedf;
+  --chat:#ff8a3d;
+  --photo:#ff6a3d;
+  --story:#c94f7c;
+}
+[data-theme="grape"]{
+  color-scheme:dark;
+  --yellow:#9b5de5;
+  --ink:#f3eefc;
+  --ink2:#b7a9d6;
+  --ink3:#9180b3;
+  --inkbtn:#f3eefc;
+  --inkbtn-fg:#1b1428;
+  --line:#342a4a;
+  --bg:#171221;
+  --sheet:#1e1729;
+  --soft:#291e3d;
+  --chat:#c084fc;
+  --photo:#9b5de5;
+  --story:#e05d9e;
+  --shadow:0 10px 34px rgba(0,0,0,.55);
+}
+[data-theme="mint"]{
+  --yellow:#00a878;
+  --ink:#0e211a;
+  --ink2:#4f6f61;
+  --ink3:#7d9a8c;
+  --inkbtn:#0e211a;
+  --line:#d2ecdd;
+  --bg:#f7fdf9;
+  --sheet:#f7fdf9;
+  --soft:#e3f5ea;
+  --chat:#00b8a9;
+  --photo:#00a878;
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 html{background:var(--root-bg,#1e90ff)}
 body{
-  margin:0;background:#e9e9ee;color:var(--ink);
+  margin:0;background:var(--root-bg,#e9e9ee);color:var(--ink);
   font-family:"Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior:none;
 }
@@ -98,13 +175,13 @@ img{display:block}
 .field::placeholder{color:var(--ink3)}
 .field:focus{box-shadow:inset 0 0 0 2px var(--ink)}
 .btn-yellow{
-  background:var(--ink);color:#fff;border-radius:999px;padding:15px;font-weight:800;font-size:16px;
+  background:var(--inkbtn);color:var(--inkbtn-fg);border-radius:999px;padding:15px;font-weight:800;font-size:16px;
   margin-top:4px;transition:transform .1s,opacity .15s;
 }
 .btn-yellow:active{transform:scale(.97)}
 .btn-yellow:disabled{opacity:.5}
 .btn-toggle{margin-top:14px;font-weight:700;font-size:14px;color:rgba(15,16,20,.88);padding:6px}
-.error{min-height:20px;color:#c8102e;font-size:13.5px;font-weight:600;margin:10px 2px 0}
+.error{min-height:20px;color:var(--danger);font-size:13.5px;font-weight:600;margin:10px 2px 0}
 /* On the blue auth screen red text is unreadable, so there the error sits
    in a white chip with dark-red text (only painted when a message exists). */
 #auth-error:not(:empty){background:#fff;color:#b3001b;border-radius:999px;padding:8px 16px;box-shadow:0 4px 14px rgba(15,16,20,.18)}
@@ -156,10 +233,10 @@ img{display:block}
 .story-chip .ring{width:64px;height:64px;border-radius:50%;padding:3px}
 .story-chip .ring.purple{background:conic-gradient(from 210deg,#8329c9,#c65df0,#8329c9)}
 .story-chip .ring.yellow{background:var(--yellow)}
-.story-chip .ring-inner{background:#fff;border-radius:50%;padding:2.5px;width:100%;height:100%}
+.story-chip .ring-inner{background:var(--bg);border-radius:50%;padding:2.5px;width:100%;height:100%}
 .story-chip .avatar{width:100%;height:100%;font-size:24px}
 .story-chip span{font-size:12px;font-weight:600;color:var(--ink);max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.story-chip .plus{position:absolute;right:-1px;bottom:-1px;width:20px;height:20px;border-radius:50%;background:var(--chat);color:#fff;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center}
+.story-chip .plus{position:absolute;right:-1px;bottom:-1px;width:20px;height:20px;border-radius:50%;background:var(--chat);color:#fff;border:2.5px solid var(--bg);display:flex;align-items:center;justify-content:center}
 .story-chip .plus svg{width:11px;height:11px}
 .ring-wrap{position:relative}
 .story-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:2px 16px 20px}
@@ -210,16 +287,16 @@ img{display:block}
 #tabbar{
   position:relative;z-index:10;
   height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
-  display:flex;align-items:stretch;background:#fff;border-top:1px solid var(--line);flex:none;
+  display:flex;align-items:stretch;background:var(--bg);border-top:1px solid var(--line);flex:none;
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#68727f;font-size:10px;font-weight:700}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--ink3);font-size:10px;font-weight:700}
 .tab svg{width:23px;height:23px}
 .tab.active{color:var(--yellow)}
 .tab-cam-btn{
   position:absolute;left:50%;top:0;transform:translate(-50%,-50%);
   width:52px;height:52px;border-radius:50%;background:var(--yellow);
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(0,0,0,.18);border:3px solid #fff;color:#000;transition:transform .12s;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);border:3px solid var(--bg);color:#000;transition:transform .12s;
 }
 .tab-cam-btn:active{transform:translate(-50%,-50%) scale(.93)}
 .tab-cam-btn svg{width:25px;height:25px}
@@ -327,7 +404,7 @@ img{display:block}
 .photo-ico svg{width:22px;height:22px}
 .photo-card b{font-size:14.5px;display:block}
 .photo-card small{font-size:12.5px;color:var(--ink2);font-weight:600}
-.photo-card.seen .photo-ico{background:#fff;color:var(--photo);box-shadow:inset 0 0 0 2px var(--photo)}
+.photo-card.seen .photo-ico{background:var(--bg);color:var(--photo);box-shadow:inset 0 0 0 2px var(--photo)}
 .thread-input{flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
 .thread-input .pill{flex:1;display:flex;align-items:center;background:var(--soft);border-radius:999px;padding:4px 6px 4px 16px;gap:6px}
 .thread-input input{flex:1;font-size:16px;padding:8px 0;outline:none;min-width:0}
@@ -351,7 +428,7 @@ img{display:block}
 .field-soft::placeholder{color:var(--ink3)}
 .btn-block{width:100%;border-radius:999px;padding:14px;font-weight:800;font-size:15.5px;text-align:center;transition:transform .1s}
 .btn-block:active{transform:scale(.98)}
-.btn-ink{background:var(--ink);color:#fff}
+.btn-ink{background:var(--inkbtn);color:var(--inkbtn-fg)}
 .btn-yellow2{background:var(--yellow);color:#000}
 .btn-ghost{color:var(--ink2);font-weight:700}
 .btn-danger-t{color:var(--danger);font-weight:700}
@@ -368,7 +445,7 @@ img{display:block}
 #screen-profile{z-index:30}
 .profile-scroll{flex:1;overflow-y:auto;padding:0 0 30px;display:flex;flex-direction:column;align-items:center}
 .profile-scroll::-webkit-scrollbar{display:none}
-.profile-scroll .avatar.lg{box-shadow:0 0 0 5px #fff}
+.profile-scroll .avatar.lg{box-shadow:0 0 0 5px var(--bg)}
 .profile-banner{width:100%;height:168px;flex:none;background:var(--yellow);position:relative;overflow:hidden}
 .profile-banner img{width:100%;height:100%;object-fit:cover}
 .profile-banner .banner-comet{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:74px;height:74px;opacity:.4}
@@ -405,6 +482,19 @@ img{display:block}
 .set-acct svg{width:21px;height:21px;color:var(--ink3);flex:none}
 .set-val{color:var(--ink2);font-weight:500;font-size:14.5px;text-align:right}
 .set-val.upd-ready{color:var(--yellow);font-weight:800}
+
+/* ---------- theme picker ---------- */
+.theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.theme-card{border:2px solid var(--line);border-radius:16px;padding:9px;background:var(--sheet);text-align:left;transition:border-color .15s,transform .1s}
+.theme-card:active{transform:scale(.97)}
+.theme-card.on{border-color:var(--yellow)}
+.theme-prev{height:50px;border-radius:10px;position:relative;overflow:hidden;margin-bottom:8px}
+.theme-prev .tp-dot{position:absolute;top:9px;left:9px;width:15px;height:15px;border-radius:50%}
+.theme-prev .tp-line{position:absolute;left:32px;height:7px;border-radius:99px;opacity:.8}
+.theme-prev .tp-bar{position:absolute;left:0;right:0;bottom:0;height:13px}
+.theme-name{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:6px;color:var(--ink)}
+.theme-name .check{margin-left:auto;color:var(--yellow);display:flex}
+.theme-name .check svg{width:16px;height:16px}
 
 /* ---------- fullscreen viewers ---------- */
 .fs-view{position:absolute;inset:0;z-index:50;background:#000;display:flex;flex-direction:column}
@@ -447,21 +537,21 @@ img{display:block}
 .call-ctl:active .cc{transform:scale(.93)}
 
 /* ---------- toast ---------- */
-#toast{position:absolute;left:50%;bottom:calc(var(--tabbar-h) + 18px);transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:86%;text-align:center;box-shadow:var(--shadow)}
+#toast{position:absolute;left:50%;bottom:calc(var(--tabbar-h) + 18px);transform:translateX(-50%) translateY(14px);background:var(--inkbtn);color:var(--inkbtn-fg);border-radius:999px;padding:10px 20px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:86%;text-align:center;box-shadow:var(--shadow)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* ---------- update banner ---------- */
 #update-banner{
   position:absolute;top:calc(12px + env(safe-area-inset-top));left:12px;right:12px;z-index:85;
-  background:var(--ink);color:#fff;border-radius:14px;padding:10px 10px 10px 16px;
+  background:var(--inkbtn);color:var(--inkbtn-fg);border-radius:14px;padding:10px 10px 10px 16px;
   display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);
   animation:sheetUp .3s var(--ease);
 }
 #update-banner span{flex:1;font-size:14.5px;font-weight:700}
 #btn-update-now{background:var(--yellow);color:#fff;border-radius:999px;padding:8px 16px;font-weight:800;font-size:13.5px;flex:none;transition:transform .1s}
 #btn-update-now:active{transform:scale(.95)}
-#btn-update-dismiss{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.75);flex:none}
+#btn-update-dismiss{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--inkbtn-fg);opacity:.7;flex:none}
 #btn-update-dismiss svg{width:15px;height:15px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -631,6 +721,9 @@ img{display:block}
         <button class="set-row" id="setg-edit"><span class="lab">Edit Profile</span><span data-ico="chev"></span></button>
         <button class="set-row" id="setg-friends"><span class="lab">Friends</span><span data-ico="chev"></span></button>
       </div>
+      <div class="sec-label" style="padding:22px 2px 0">Appearance</div>
+      <div class="theme-grid" id="setg-themes"></div>
+      <p class="set-note" style="margin-top:10px">Your theme is saved on this device and applies right away.</p>
       <div class="sec-label" style="padding:22px 2px 0">App</div>
       <div class="set-list" style="margin-top:2px">
         <button class="set-row" id="setg-notif"><span class="lab">Notifications</span><span class="set-val" id="setg-notif-val">Enable Notifications</span><span data-ico="chev"></span></button>
@@ -902,7 +995,8 @@ const IC = {
   speaker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.6v4.8h3.4L12 18.5V5.5L7.4 9.6H4Z"/><path d="M15.4 9.2a4 4 0 0 1 0 5.6M17.8 6.9a7.4 7.4 0 0 1 0 10.2"/></svg>',
   vidOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.2A2.4 2.4 0 0 1 5.4 7h7.2a2.4 2.4 0 0 1 2.4 2.4v5.2M15 11l6-3.4v8.8l-2.4-1.4M5.6 17h6.8M4 4l16 16"/></svg>',
   phoneEnd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(135 12 12)"><path d="M5 4h3.4l1.6 4.4-2.3 1.8a12.6 12.6 0 0 0 6 6L15.6 14 20 15.6V19a1.8 1.8 0 0 1-2 1.8C10.4 20.2 3.8 13.6 3.2 6A1.8 1.8 0 0 1 5 4Z"/></g></svg>',
-  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01A1.7 1.7 0 0 0 10 2.91V3a2 2 0 1 1 4 0v.09c0 .68.4 1.3 1 1.55.61.26 1.32.1 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01c.26.6.87 1 1.55 1H21a2 2 0 1 1 0 4h-.09c-.68 0-1.29.4-1.51 1Z"/></svg>'
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01A1.7 1.7 0 0 0 10 2.91V3a2 2 0 1 1 4 0v.09c0 .68.4 1.3 1 1.55.61.26 1.32.1 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01c.26.6.87 1 1.55 1H21a2 2 0 1 1 0 4h-.09c-.68 0-1.29.4-1.51 1Z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 10 18 19.5 6.5"/></svg>'
 };
 function setIco(el, name){ if (el) el.innerHTML = IC[name] || ''; }
 document.querySelectorAll('[data-ico]').forEach(el => setIco(el, el.dataset.ico));
@@ -1217,7 +1311,60 @@ function openSettings(){
   $('setg-version').textContent = BLIP_VERSION;
   updateNotifRow();
   syncUpdateRow();
+  renderThemeGrid();
   show($('screen-settings'));
+}
+
+/* ---------- themes ----------
+   The picker lives in Settings > Appearance. A theme is a palette swap:
+   applyTheme sets data-theme on <html> and the CSS variables do the
+   rest (see the [data-theme] blocks in the stylesheet). The choice is
+   stored on this device only ('blip_theme' in localStorage — the same
+   kind of device-local setting as the camera permission marker), and
+   the boot script in <head> re-applies it before first paint, login
+   screen included. The preview colors below mirror the CSS palettes so
+   each card shows its own theme, not the current one. */
+const THEMES = [
+  { id: 'light',  name: 'Light',  bg: '#ffffff', soft: '#f4f4f7', ink: '#0f1014', accent: '#1e90ff' },
+  { id: 'dark',   name: 'Dark',   bg: '#101218', soft: '#1e222d', ink: '#f4f6fa', accent: '#1e90ff' },
+  { id: 'sunset', name: 'Sunset', bg: '#fffaf5', soft: '#fdeedf', ink: '#2a1710', accent: '#ff6a3d' },
+  { id: 'grape',  name: 'Grape',  bg: '#171221', soft: '#291e3d', ink: '#f3eefc', accent: '#9b5de5' },
+  { id: 'mint',   name: 'Mint',   bg: '#f7fdf9', soft: '#e3f5ea', ink: '#0e211a', accent: '#00a878' }
+];
+let themeId = 'light';
+try { themeId = localStorage.getItem('blip_theme') || 'light'; } catch (e) {}
+if (!THEMES.some(t => t.id === themeId)) themeId = 'light';
+function applyTheme(id){
+  const t = THEMES.find(x => x.id === id) || THEMES[0];
+  themeId = t.id;
+  document.documentElement.setAttribute('data-theme', t.id);
+  try { localStorage.setItem('blip_theme', t.id); } catch (e) {}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t.accent);
+  renderThemeGrid();
+  syncRootBg();
+}
+function renderThemeGrid(){
+  const grid = $('setg-themes');
+  if (!grid) return;
+  grid.innerHTML = '';
+  THEMES.forEach(t => {
+    const card = document.createElement('button');
+    card.className = 'theme-card' + (t.id === themeId ? ' on' : '');
+    card.setAttribute('aria-label', t.name + ' theme');
+    card.innerHTML =
+      '<div class="theme-prev" style="background:' + t.bg + '">' +
+        '<span class="tp-dot" style="background:' + t.accent + '"></span>' +
+        '<span class="tp-line" style="background:' + t.ink + ';top:11px;width:46%"></span>' +
+        '<span class="tp-line" style="background:' + t.ink + ';top:23px;width:30%;opacity:.45"></span>' +
+        '<span class="tp-bar" style="background:' + t.soft + '"></span>' +
+      '</div>' +
+      '<div class="theme-name">' + esc(t.name) +
+        (t.id === themeId ? '<span class="check">' + IC.check + '</span>' : '') +
+      '</div>';
+    card.onclick = () => { if (themeId !== t.id) { applyTheme(t.id); toast(t.name + ' Theme On'); } };
+    grid.appendChild(card);
+  });
 }
 /* Profile images: the picked photo goes through the positioner first
    (drag / pinch / zoom inside the frame the profile actually shows),
@@ -2861,7 +3008,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0020';
+const BLIP_VERSION = '2026.10.17.0021';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
@@ -2965,10 +3112,11 @@ fitStageSoon();
    app) and no leftover strip can show as a contrasting bar. */
 function syncRootBg(){
   const vis = (id) => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
-  let c = '#ffffff';
+  const cs = getComputedStyle(document.documentElement);
+  let c = (cs.getPropertyValue('--bg') || '').trim() || '#ffffff';
   if (vis('screen-call')) c = '#101318';
   else if (vis('screen-story') || vis('screen-photo') || vis('screen-editor') || vis('screen-crop')) c = '#000000';
-  else if (vis('screen-splash') || vis('screen-auth')) c = '#1e90ff';
+  else if (vis('screen-splash') || vis('screen-auth')) c = (cs.getPropertyValue('--yellow') || '').trim() || '#1e90ff';
   document.documentElement.style.setProperty('--root-bg', c);
 }
 new MutationObserver(syncRootBg).observe($('stage'), { subtree: true, attributes: true, attributeFilter: ['class'] });
