@@ -275,6 +275,21 @@ img{display:block}
 .edit-tool-btn svg{width:16px;height:16px}
 .edit-bottom{flex:none;display:flex;justify-content:flex-end;padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
 
+/* ---------- profile photo / banner positioner ---------- */
+#screen-crop{z-index:65;background:#000}
+.crop-title{color:#fff;font-size:16.5px;font-weight:800}
+.crop-stage{flex:1;position:relative;overflow:hidden;min-height:0;width:100%;touch-action:none;background:#000}
+#crop-img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none}
+.crop-frame{position:absolute;border:2px solid #fff;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.62);pointer-events:none}
+.crop-frame.round{border-radius:50%}
+.crop-hint{flex:none;text-align:center;color:rgba(255,255,255,.75);font-size:13.5px;font-weight:600;padding:10px 16px 0}
+.crop-zoomrow{flex:none;display:flex;align-items:center;gap:12px;padding:10px 22px 0;color:rgba(255,255,255,.75)}
+.crop-zoomrow svg{width:19px;height:19px;flex:none}
+#crop-zoom{flex:1;accent-color:var(--yellow);height:28px}
+.crop-bottom{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
+.crop-bottom .sp{flex:1}
+.btn-white-ghost{color:#fff;font-weight:700;font-size:15px;padding:12px 10px}
+
 /* ---------- placeholder pane (map) ---------- */
 .ph-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 34px;text-align:center}
 .ph-ico{width:82px;height:82px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;color:#000}
@@ -646,6 +661,32 @@ img{display:block}
     </div>
   </div>
 
+  <!-- ============ PHOTO / BANNER POSITIONER ============ -->
+  <div id="screen-crop" class="fs-view hidden">
+    <div class="edit-top">
+      <button class="cam-ctl" id="btn-crop-close" aria-label="Cancel"></button>
+      <span class="sp"></span>
+      <span class="crop-title" id="crop-title">Position Photo</span>
+      <span class="sp"></span>
+      <span style="width:40px"></span>
+    </div>
+    <div class="crop-stage" id="crop-stage">
+      <img id="crop-img" alt="">
+      <div class="crop-frame" id="crop-frame"></div>
+    </div>
+    <p class="crop-hint">Drag to move · pinch or slide to zoom</p>
+    <div class="crop-zoomrow">
+      <span style="font-size:19px;font-weight:800;line-height:1">−</span>
+      <input id="crop-zoom" type="range" min="0" max="100" value="0" aria-label="Zoom">
+      <span style="font-size:19px;font-weight:800;line-height:1">+</span>
+    </div>
+    <div class="crop-bottom">
+      <button class="btn-white-ghost" id="btn-crop-cancel">Cancel</button>
+      <span class="sp"></span>
+      <button class="btn-white" id="btn-crop-save">Save</button>
+    </div>
+  </div>
+
   <!-- ============ SEND SHEET ============ -->
   <div id="sheet-send" class="overlay hidden">
     <div class="sheet">
@@ -890,7 +931,16 @@ let camDenied = false;
    local store as the read markers): 'granted' or 'denied'. A remembered
    denial means the app never fires an automatic ask again on later
    launches — the prompt is a once-ever thing unless the user taps
-   "Turn On Camera" themselves. */
+   "Turn On Camera" themselves.
+   IMPORTANT: a remembered 'granted' is NOT a reason to auto-start.
+   Safari/WebKit ties a camera grant to the live browsing session and
+   stops honoring it once every track has stopped (always true on a
+   fresh launch), so an automatic getUserMedia on launch re-prompts
+   there no matter what was granted last time — that is exactly the
+   "asks every time I open it" bug. Automatic starts therefore trust
+   only the browser's live Permissions API state (see startCamera);
+   where the browser cannot confirm a live grant, the camera waits for
+   the user's own tap instead of asking uninvited. */
 let camPerm = '';
 let camStarting = null;      // in-flight getUserMedia promise (single-flight)
 let camRunning = false;
@@ -948,7 +998,7 @@ function markOpened(otherId){
 
 /* ---------- auth ---------- */
 async function init(){
-  wireAuth(); wireNav(); wireProfile(); wireSettings(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor();
+  wireAuth(); wireNav(); wireProfile(); wireSettings(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor(); wireCropper();
   // The service worker asks us to re-subscribe when the push service rotates
   // our subscription ('pushsubscriptionchange').
   if ('serviceWorker' in navigator) {
@@ -1073,10 +1123,10 @@ async function enterApp(user){
   loadLocal();
   refreshMyAvatars();
   hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
-  // Land on the camera — it's the first thing the app opens to. The one
-  // camera-permission ask happens on this first open; the grant (or a
-  // denial) is remembered on the device, so later launches open straight
-  // into the preview without asking again (see startCamera).
+  // Land on the camera — it's the first thing the app opens to. Opening
+  // never fires a permission ask by itself: startCamera only revives the
+  // preview when the browser confirms the grant is still live, and
+  // otherwise shows the "Turn On Camera" state for the user's own tap.
   switchView('view-camera');
   loadFriends();
   loadChats(); loadStories();
@@ -1106,7 +1156,7 @@ function switchView(v){
   // Leaving the camera tab only pauses the preview render — the stream is
   // kept alive so coming back never re-asks for camera permission. The
   // stream is fully released only for calls (stopCamera in startCall /
-  // acceptCall) and camera flips.
+  // acceptCall); a flip retargets the live track instead of restarting.
   if (v === 'view-camera') startCamera(); else pauseCamera();
   if (v === 'view-chats') loadChats();
   if (v === 'view-stories') loadStories();
@@ -1166,20 +1216,10 @@ function openSettings(){
   syncUpdateRow();
   show($('screen-settings'));
 }
-/* Profile images: downscale, upload to blip-media, save the URL on
-   blip_profiles (avatar_url for the photo, banner_url for the cover). */
-async function downscaleImage(f, maxDim){
-  try {
-    const img = new Image();
-    img.src = URL.createObjectURL(f);
-    await img.decode();
-    const c = document.createElement('canvas');
-    const s = Math.min(1, maxDim / Math.max(img.width, img.height));
-    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    return (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85))) || f;
-  } catch (err) { return f; }
-}
+/* Profile images: the picked photo goes through the positioner first
+   (drag / pinch / zoom inside the frame the profile actually shows),
+   then the framed region is rendered to a JPEG, uploaded to blip-media,
+   and its URL saved on blip_profiles (avatar_url / banner_url). */
 async function saveProfileImage(blob, kind){
   const path = me.id + '/' + kind + '-' + Date.now() + '.jpg';
   const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
@@ -1192,24 +1232,172 @@ async function saveProfileImage(blob, kind){
   profilesCache[me.id] = { ...profilesCache[me.id], ...patch };
   return true;
 }
-async function onAvatarFile(e){
+function onAvatarFile(e){
   const f = e.target.files[0]; e.target.value = '';
-  if (!f) return;
-  toast('Uploading Photo…');
-  const blob = await downscaleImage(f, 512);
-  if (await saveProfileImage(blob, 'avatar')) {
-    openProfile(); refreshMyAvatars(); refreshEditSheet();
-    toast('Profile Photo Updated');
+  if (f) openCropper(f, 'avatar');
+}
+function onBannerFile(e){
+  const f = e.target.files[0]; e.target.value = '';
+  if (f) openCropper(f, 'banner');
+}
+
+/* ---------- photo positioner (profile photo + banner) ----------
+   The chosen image floats under a fixed frame shaped like the slot it
+   will fill (round 1:1 for the profile photo, wide strip for the
+   banner). Drag moves it, pinch or the slider zooms it, and the image
+   is always clamped so it covers the frame — what you frame is exactly
+   what gets uploaded. */
+let cropState = null; // { kind, url, iw, ih, frame:{x,y,w,h}, minScale, scale, x, y, pointers:Map, pinch }
+function wireCropper(){
+  setIco($('btn-crop-close'), 'x');
+  $('btn-crop-close').onclick = closeCropper;
+  $('btn-crop-cancel').onclick = closeCropper;
+  $('btn-crop-save').onclick = saveCrop;
+  const stage = $('crop-stage');
+  stage.addEventListener('pointerdown', cropPointerDown);
+  stage.addEventListener('pointermove', cropPointerMove);
+  stage.addEventListener('pointerup', cropPointerUp);
+  stage.addEventListener('pointercancel', cropPointerUp);
+  stage.addEventListener('wheel', cropWheel, { passive: false });
+  $('crop-zoom').addEventListener('input', cropSlider);
+}
+async function openCropper(file, kind){
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.src = url;
+  try { await img.decode(); } catch (e) { URL.revokeObjectURL(url); toast('Could not open that photo'); return; }
+  cropState = { kind, url, iw: img.naturalWidth, ih: img.naturalHeight, frame: null, minScale: 1, scale: 1, x: 0, y: 0, pointers: new Map(), pinch: null };
+  $('crop-title').textContent = kind === 'banner' ? 'Position Banner' : 'Position Photo';
+  $('crop-frame').classList.toggle('round', kind === 'avatar');
+  const el = $('crop-img');
+  el.src = url;
+  show($('screen-crop'));
+  // Lay out once the stage has its real size.
+  requestAnimationFrame(layoutCropFrame);
+}
+function layoutCropFrame(){
+  const cs = cropState; if (!cs) return;
+  const stage = $('crop-stage');
+  const W = stage.clientWidth, H = stage.clientHeight;
+  if (!W || !H) return;
+  let fw, fh;
+  if (cs.kind === 'avatar') { const s = Math.min(W * 0.8, H * 0.72); fw = s; fh = s; }
+  else { fw = Math.min(W * 0.94, 560); fh = fw * (168 / 390); if (fh > H * 0.6) { fh = H * 0.6; fw = fh * (390 / 168); } }
+  cs.frame = { x: (W - fw) / 2, y: (H - fh) / 2, w: fw, h: fh };
+  const fr = $('crop-frame');
+  fr.style.left = cs.frame.x + 'px'; fr.style.top = cs.frame.y + 'px';
+  fr.style.width = fw + 'px'; fr.style.height = fh + 'px';
+  // Start at the smallest zoom that still covers the frame, centered.
+  cs.minScale = Math.max(fw / cs.iw, fh / cs.ih);
+  cs.scale = cs.minScale;
+  cs.x = cs.frame.x + fw / 2 - (cs.iw * cs.scale) / 2;
+  cs.y = cs.frame.y + fh / 2 - (cs.ih * cs.scale) / 2;
+  syncCropSlider();
+  applyCrop();
+}
+function clampCrop(){
+  const cs = cropState; if (!cs || !cs.frame) return;
+  cs.scale = Math.min(Math.max(cs.scale, cs.minScale), cs.minScale * 6);
+  const w = cs.iw * cs.scale, h = cs.ih * cs.scale, f = cs.frame;
+  cs.x = Math.min(f.x, Math.max(f.x + f.w - w, cs.x));
+  cs.y = Math.min(f.y, Math.max(f.y + f.h - h, cs.y));
+}
+function applyCrop(){
+  const cs = cropState; if (!cs) return;
+  clampCrop();
+  $('crop-img').style.transform = 'translate(' + cs.x + 'px,' + cs.y + 'px) scale(' + cs.scale + ')';
+}
+function syncCropSlider(){
+  const cs = cropState; if (!cs) return;
+  const t = (cs.scale / cs.minScale - 1) / 5; // 0..1 across the 1x..6x range
+  $('crop-zoom').value = String(Math.round(Math.min(1, Math.max(0, t)) * 100));
+}
+function cropZoomAt(cx, cy, newScale){
+  const cs = cropState; if (!cs || !cs.frame) return;
+  // Keep the image point under (cx, cy) pinned while the scale changes.
+  const ix = (cx - cs.x) / cs.scale, iy = (cy - cs.y) / cs.scale;
+  cs.scale = newScale;
+  cs.x = cx - ix * cs.scale; cs.y = cy - iy * cs.scale;
+  applyCrop(); syncCropSlider();
+}
+function cropSlider(){
+  const cs = cropState; if (!cs || !cs.frame) return;
+  const t = Number($('crop-zoom').value) / 100;
+  cropZoomAt(cs.frame.x + cs.frame.w / 2, cs.frame.y + cs.frame.h / 2, cs.minScale * (1 + t * 5));
+}
+function cropWheel(e){
+  const cs = cropState; if (!cs) return;
+  e.preventDefault();
+  const r = $('crop-stage').getBoundingClientRect();
+  const f = Math.exp(-e.deltaY * 0.0016);
+  cropZoomAt(e.clientX - r.left, e.clientY - r.top, cs.scale * f);
+}
+function cropPointerDown(e){
+  const cs = cropState; if (!cs) return;
+  const stage = $('crop-stage');
+  try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+  const r = stage.getBoundingClientRect();
+  cs.pointers.set(e.pointerId, { x: e.clientX - r.left, y: e.clientY - r.top });
+  if (cs.pointers.size === 2) {
+    const p = [...cs.pointers.values()];
+    cs.pinch = { d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), scale: cs.scale, x: cs.x, y: cs.y,
+                 cx: (p[0].x + p[1].x) / 2, cy: (p[0].y + p[1].y) / 2 };
   }
 }
-async function onBannerFile(e){
-  const f = e.target.files[0]; e.target.value = '';
-  if (!f) return;
-  toast('Uploading Banner…');
-  const blob = await downscaleImage(f, 1280);
-  if (await saveProfileImage(blob, 'banner')) {
-    openProfile(); refreshEditSheet();
-    toast('Banner Updated');
+function cropPointerMove(e){
+  const cs = cropState; if (!cs || !cs.pointers.has(e.pointerId)) return;
+  const r = $('crop-stage').getBoundingClientRect();
+  const nx = e.clientX - r.left, ny = e.clientY - r.top;
+  const prev = cs.pointers.get(e.pointerId);
+  cs.pointers.set(e.pointerId, { x: nx, y: ny });
+  if (cs.pointers.size === 1) {
+    cs.x += nx - prev.x; cs.y += ny - prev.y;
+    applyCrop();
+  } else if (cs.pointers.size === 2 && cs.pinch) {
+    const p = [...cs.pointers.values()];
+    const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+    const cx = (p[0].x + p[1].x) / 2, cy = (p[0].y + p[1].y) / 2;
+    if (cs.pinch.d > 0) {
+      // Zoom about the pinch center, and let the center itself drag.
+      const ix = (cs.pinch.cx - cs.pinch.x) / cs.pinch.scale;
+      const iy = (cs.pinch.cy - cs.pinch.y) / cs.pinch.scale;
+      cs.scale = cs.pinch.scale * (d / cs.pinch.d);
+      cs.x = cx - ix * cs.scale; cs.y = cy - iy * cs.scale;
+      applyCrop(); syncCropSlider();
+    }
+  }
+}
+function cropPointerUp(e){
+  const cs = cropState; if (!cs) return;
+  cs.pointers.delete(e.pointerId);
+  if (cs.pointers.size < 2) cs.pinch = null;
+}
+function closeCropper(){
+  if (cropState) URL.revokeObjectURL(cropState.url);
+  cropState = null;
+  $('crop-img').removeAttribute('src');
+  hide($('screen-crop'));
+}
+async function saveCrop(){
+  const cs = cropState; if (!cs || !cs.frame) return;
+  const outW = cs.kind === 'banner' ? 1200 : 512;
+  const outH = Math.round(outW * (cs.frame.h / cs.frame.w));
+  const c = document.createElement('canvas');
+  c.width = outW; c.height = outH;
+  const sx = (cs.frame.x - cs.x) / cs.scale, sy = (cs.frame.y - cs.y) / cs.scale;
+  const sw = cs.frame.w / cs.scale, sh = cs.frame.h / cs.scale;
+  const img = new Image();
+  img.src = cs.url;
+  try { await img.decode(); } catch (e) {}
+  c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+  const kind = cs.kind;
+  closeCropper();
+  toast(kind === 'banner' ? 'Uploading Banner…' : 'Uploading Photo…');
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
+  if (!blob) { toast('Could not save that photo'); return; }
+  if (await saveProfileImage(blob, kind)) {
+    if (kind === 'banner') { openProfile(); refreshEditSheet(); toast('Banner Updated'); }
+    else { openProfile(); refreshMyAvatars(); refreshEditSheet(); toast('Profile Photo Updated'); }
   }
 }
 /* ---------- Edit Profile sheet: photo, banner, name, username, bio ---------- */
@@ -1618,11 +1806,12 @@ function subscribeRealtime(){
 /* ---------- camera ---------- */
 function wireCamera(){
   $('btn-shutter').onclick = capturePhoto;
-  // The one user-initiated retry: tapping "Turn On Camera" clears the
-  // denial latch (session and remembered) so a single fresh ask is
-  // allowed; nothing else ever re-asks.
-  $('btn-cam-start').onclick = () => { camDenied = false; camPerm = ''; saveLocal(); startCamera(); };
-  $('btn-flip').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; stopCamera(); startCamera(); };
+  // The one user-initiated ask: tapping "Turn On Camera" clears the
+  // denial latch (session and remembered) and requests access inside
+  // that tap's user activation. Nothing else ever asks — automatic
+  // starts may only reuse a grant the browser confirms is still live.
+  $('btn-cam-start').onclick = () => { camDenied = false; camPerm = ''; saveLocal(); startCamera(true); };
+  $('btn-flip').onclick = flipCamera;
   const onFile = (e) => { const f = e.target.files[0]; if (f) uploadFallback(f); e.target.value = ''; };
   $('file-upload').onchange = onFile;
   $('file-upload2').onchange = onFile;
@@ -1633,47 +1822,77 @@ function setCamPerm(v){
   camPerm = v;
   if (me) saveLocal();
 }
-async function startCamera(){
-  hide($('cam-off'));
-  if (camStream) { camRunning = true; requestAnimationFrame(camTick); return; }
+/* Camera starts come in two kinds, and only one of them may ever show
+   the system permission prompt:
+   - AUTOMATIC starts (app launch, tab switches, coming back from a
+     call) may only reuse a grant the browser itself confirms is still
+     live via the Permissions API. On browsers that keep grants across
+     launches (Chrome/Android, desktop) the preview just resumes,
+     silently. On Safari/WebKit the grant dies with the session's
+     tracks, the state reads 'prompt', and the camera simply waits on
+     its off screen — no uninvited ask, ever. That unconditioned
+     auto-ask on launch was the "asks every time I open it" bug: no
+     localStorage flag can stop the browser re-prompting when the app
+     itself keeps calling getUserMedia.
+   - EXPLICIT starts (the "Turn On Camera" button) are the user's own
+     tap, so the request runs synchronously inside that tap's user
+     activation and is allowed to ask — once, when the user asks for it. */
+async function startCamera(explicit){
+  if (camStream) { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); return; }
   // Asked and refused (this session, or remembered from an earlier one):
-  // never ask again on our own — iOS re-prompts on a fresh getUserMedia
-  // once the old stream is gone, which is what made it feel like it asked
-  // every single time. Just show the off state with the upload option.
+  // never ask again on our own. Just show the off state with the upload
+  // option and the one explicit retry button.
   if (camDenied || camPerm === 'denied') { camDenied = true; show($('cam-off')); return; }
-  // Single-flight: overlapping opens (launch + tab tap) share one ask, so
+  // Single-flight: overlapping starts share one in-flight request, so
   // the prompt can never fire twice back to back.
   if (camStarting) {
     await camStarting;
-    if (camStream) { camRunning = true; requestAnimationFrame(camTick); }
+    if (camStream) { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); }
     else show($('cam-off'));
     return;
+  }
+  if (!explicit) {
+    // Automatic start: no live-grant confirmation, no request.
+    let liveGrant = false;
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const st = await navigator.permissions.query({ name: 'camera' });
+        if (st.state === 'denied') { camDenied = true; setCamPerm('denied'); show($('cam-off')); return; }
+        if (st.state === 'granted') { setCamPerm('granted'); liveGrant = true; }
+      } catch (e) {}
+    }
+    if (!liveGrant) { show($('cam-off')); return; }
   }
   camStarting = openCameraStream();
   await camStarting;
   camStarting = null;
+  if (camStream) hide($('cam-off')); else show($('cam-off'));
 }
 async function openCameraStream(){
-  // A denial the browser still remembers gets the same treatment: latch
-  // it (for this session and on the device) and don't fire a request
-  // that would prompt again. A remembered grant is recorded too.
-  if (navigator.permissions && navigator.permissions.query) {
-    try {
-      const st = await navigator.permissions.query({ name: 'camera' });
-      if (st.state === 'denied') { camDenied = true; setCamPerm('denied'); show($('cam-off')); return; }
-      if (st.state === 'granted') setCamPerm('granted');
-    } catch (e) {}
-  }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
-  } catch (e) { camDenied = true; setCamPerm('denied'); show($('cam-off')); return; }
+  } catch (e) { camDenied = true; setCamPerm('denied'); return; }
   setCamPerm('granted');
   const v = document.createElement('video');
   v.srcObject = camStream; v.muted = true; v.playsInline = true;
-  await v.play();
+  try { await v.play(); } catch (e) {}
   window._blipVideo = v;
   camRunning = true;
   requestAnimationFrame(camTick);
+}
+/* Flip front/back WITHOUT stopping the stream: retarget the live track
+   with applyConstraints, which needs no new getUserMedia and so can
+   never re-ask for permission mid-session. Only browsers that refuse
+   the retarget fall back to a fresh stream — and that runs inside the
+   flip tap's own user activation, as an explicit start. */
+async function flipCamera(){
+  facing = facing === 'user' ? 'environment' : 'user';
+  const track = camStream && camStream.getVideoTracks()[0];
+  if (track && track.applyConstraints) {
+    try { await track.applyConstraints({ facingMode: facing }); return; }
+    catch (e) { /* fall through to a fresh stream */ }
+  }
+  if (camStream) { stopCamera(); startCamera(true); }
 }
 function pauseCamera(){ camRunning = false; }
 function stopCamera(){
@@ -2638,7 +2857,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0016';
+const BLIP_VERSION = '2026.10.17.0017';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
@@ -2738,7 +2957,7 @@ function syncRootBg(){
   const vis = (id) => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
   let c = '#ffffff';
   if (vis('screen-call')) c = '#101318';
-  else if (vis('screen-story') || vis('screen-photo') || vis('screen-editor')) c = '#000000';
+  else if (vis('screen-story') || vis('screen-photo') || vis('screen-editor') || vis('screen-crop')) c = '#000000';
   else if (vis('screen-splash') || vis('screen-auth')) c = '#1e90ff';
   document.documentElement.style.setProperty('--root-bg', c);
 }
