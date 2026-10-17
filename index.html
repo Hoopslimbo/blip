@@ -237,6 +237,32 @@ img{display:block}
 .btn-ghost-w{color:#fff;font-weight:700;font-size:14.5px;padding:8px;text-shadow:0 1px 5px rgba(0,0,0,.7)}
 .flash-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5}
 
+/* ---------- photo editor ---------- */
+#screen-editor{z-index:45;background:#000}
+.edit-top{position:relative;z-index:3;display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 6px}
+.edit-top .sp{flex:1}
+.edit-t{font-size:21px;font-weight:800;line-height:1}
+.cam-ctl:disabled{opacity:.35}
+.edit-stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;width:100%}
+.edit-wrap{position:relative;flex:none;line-height:0}
+#edit-canvas{display:block;border-radius:4px;touch-action:none;background:#111}
+#edit-texts{position:absolute;inset:0;overflow:hidden}
+#edit-texts.locked{pointer-events:none}
+.edit-text{position:absolute;transform:translate(-50%,-50%);font-weight:800;text-align:center;line-height:1.25;white-space:pre-wrap;word-break:break-word;padding:.28em .45em;border-radius:.18em;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;max-width:94%}
+.edit-text.band{left:0!important;transform:translateY(-50%);width:100%;max-width:100%;background:rgba(0,0,0,.55);border-radius:0;padding:.3em .5em}
+.edit-text.big{text-shadow:-2px -2px 0 rgba(0,0,0,.85),2px -2px 0 rgba(0,0,0,.85),-2px 2px 0 rgba(0,0,0,.85),2px 2px 0 rgba(0,0,0,.85),0 -2px 0 rgba(0,0,0,.85),0 2px 0 rgba(0,0,0,.85),-2px 0 0 rgba(0,0,0,.85),2px 0 0 rgba(0,0,0,.85)}
+.edit-text.sel{outline:2px dashed rgba(255,255,255,.85);outline-offset:2px}
+.edit-colors{flex:none;display:flex;align-items:center;gap:9px;padding:10px 14px 2px;overflow-x:auto}
+.edit-colors::-webkit-scrollbar{display:none}
+.swatch{width:30px;height:30px;border-radius:50%;flex:none;border:2.5px solid rgba(255,255,255,.35);transition:transform .1s}
+.swatch.on{border-color:#fff;transform:scale(1.18)}
+.edit-tool-btn{flex:none;display:flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.16);border-radius:999px;padding:8px 13px;font-size:13.5px;font-weight:700}
+.edit-tool-btn svg{width:17px;height:17px}
+.edit-bottom{flex:none;display:flex;justify-content:flex-end;padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
+.edit-input-wrap{position:absolute;left:0;right:0;top:calc(64px + env(safe-area-inset-top));z-index:6;display:flex;gap:9px;padding:0 14px;align-items:flex-start}
+.edit-input-wrap textarea{flex:1;background:rgba(20,20,24,.94);border:1.5px solid rgba(255,255,255,.5);border-radius:14px;color:#fff;font:inherit;font-size:17px;font-weight:700;padding:11px 14px;outline:none;resize:none;max-height:110px}
+.edit-input-wrap textarea::placeholder{color:rgba(255,255,255,.55)}
+
 /* ---------- placeholder pane (map) ---------- */
 .ph-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 34px;text-align:center}
 .ph-ico{width:82px;height:82px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;color:#000}
@@ -548,6 +574,31 @@ img{display:block}
     </div>
   </div>
 
+  <!-- ============ PHOTO EDITOR ============ -->
+  <div id="screen-editor" class="fs-view hidden">
+    <div class="edit-top">
+      <button class="cam-ctl" id="btn-edit-close" aria-label="Discard photo"></button>
+      <span class="sp"></span>
+      <button class="cam-ctl" id="btn-edit-undo" aria-label="Undo last drawing"></button>
+      <button class="cam-ctl" id="btn-edit-draw" aria-label="Draw on photo"></button>
+      <button class="cam-ctl edit-t" id="btn-edit-text" aria-label="Add text">T</button>
+    </div>
+    <div class="edit-stage" id="edit-stage">
+      <div class="edit-wrap" id="edit-wrap">
+        <canvas id="edit-canvas"></canvas>
+        <div id="edit-texts"></div>
+      </div>
+    </div>
+    <div class="edit-colors hidden" id="edit-colors"></div>
+    <div class="edit-bottom">
+      <button class="btn-white" id="btn-edit-done">Done</button>
+    </div>
+    <div class="edit-input-wrap hidden" id="edit-input-wrap">
+      <textarea id="edit-input" rows="1" maxlength="120" placeholder="Type something…"></textarea>
+      <button class="btn-white" id="btn-edit-input-done" style="padding:11px 20px">OK</button>
+    </div>
+  </div>
+
   <!-- ============ SEND SHEET ============ -->
   <div id="sheet-send" class="overlay hidden">
     <div class="sheet">
@@ -748,6 +799,8 @@ const IC = {
   send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5" width="16.8" height="14" rx="2.6"/><circle cx="9" cy="10" r="1.7"/><path d="m5 17.4 4.6-4.2 3.4 3 2.6-2.4 3.4 3.2"/></svg>',
+  pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 19.8l1-4L16.6 4.4a2.05 2.05 0 0 1 2.9 2.9L8.2 18.8l-4 1Z"/><path d="M14.8 6.2l2.9 2.9"/></svg>',
+  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.2 5 9.2l4 4"/><path d="M5.2 9.2H15a5.3 5.3 0 0 1 0 10.6h-3.6"/></svg>',
   phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.4l1.6 4.4-2.3 1.8a12.6 12.6 0 0 0 6 6L15.6 14 20 15.6V19a1.8 1.8 0 0 1-2 1.8C10.4 20.2 3.8 13.6 3.2 6A1.8 1.8 0 0 1 5 4Z"/></svg>',
   video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="12.4" height="10" rx="2.4"/><path d="M15.4 10.8 21 7.6v8.8l-5.6-3.2"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5h15M9.5 6V4.2A1.2 1.2 0 0 1 10.7 3h2.6a1.2 1.2 0 0 1 1.2 1.2V6M6.5 6.5l.8 12a1.6 1.6 0 0 0 1.6 1.5h6.2a1.6 1.6 0 0 0 1.6-1.5l.8-12"/></svg>',
@@ -834,7 +887,7 @@ function markOpened(otherId){
 
 /* ---------- auth ---------- */
 async function init(){
-  wireAuth(); wireNav(); wireProfile(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls();
+  wireAuth(); wireNav(); wireProfile(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor();
   // The service worker asks us to re-subscribe when the push service rotates
   // our subscription ('pushsubscriptionchange').
   if ('serviceWorker' in navigator) {
@@ -959,7 +1012,9 @@ async function enterApp(user){
   loadLocal();
   refreshMyAvatars();
   hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
-  switchView('view-camera');
+  // Land on Chats, not the camera: the camera (and its permission prompt)
+  // only starts when the user actually opens the Camera tab.
+  switchView('view-chats');
   loadFriends();
   loadChats(); loadStories();
   subscribeRealtime();
@@ -985,7 +1040,11 @@ function switchView(v){
   activeView = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
   ['view-chats','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
-  if (v === 'view-camera') startCamera(); else stopCamera();
+  // Leaving the camera tab only pauses the preview render — the stream is
+  // kept alive so coming back never re-asks for camera permission. The
+  // stream is fully released only for calls (stopCamera in startCall /
+  // acceptCall) and camera flips.
+  if (v === 'view-camera') startCamera(); else pauseCamera();
   if (v === 'view-chats') loadChats();
   if (v === 'view-stories') loadStories();
 }
@@ -1493,6 +1552,14 @@ function wireCamera(){
 async function startCamera(){
   hide($('cam-off'));
   if (camStream) { camRunning = true; requestAnimationFrame(camTick); return; }
+  // If camera access was already denied, don't fire another request (and
+  // another prompt) — just show the off state with the upload option.
+  if (navigator.permissions && navigator.permissions.query) {
+    try {
+      const st = await navigator.permissions.query({ name: 'camera' });
+      if (st.state === 'denied') { show($('cam-off')); return; }
+    } catch (e) {}
+  }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
   } catch (e) { show($('cam-off')); return; }
@@ -1503,6 +1570,7 @@ async function startCamera(){
   camRunning = true;
   requestAnimationFrame(camTick);
 }
+function pauseCamera(){ camRunning = false; }
 function stopCamera(){
   camRunning = false;
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; window._blipVideo = null; }
@@ -1528,12 +1596,8 @@ function capturePhoto(){
     f.style.transition = 'none'; f.style.opacity = '0.9';
     requestAnimationFrame(() => { f.style.transition = 'opacity .45s'; f.style.opacity = '0'; });
   }
-  canvas.toBlob(async (blob) => {
-    if (!blob) return;
-    toast('Uploading Photo…');
-    const url = await uploadImage(blob);
-    if (url) openSendSheet(url);
-  }, 'image/jpeg', 0.85);
+  // Into the editor first (text, drawing) — uploading happens on Done.
+  openEditor(canvas);
 }
 async function uploadFallback(file){
   const img = new Image();
@@ -1543,16 +1607,313 @@ async function uploadFallback(file){
   const s = Math.min(1, 1280 / Math.max(img.width, img.height));
   c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
   c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
-  toast('Uploading Photo…');
-  const url = await uploadImage(blob);
-  if (url) openSendSheet(url);
+  URL.revokeObjectURL(img.src);
+  // Uploaded photos go through the same editor as camera shots.
+  openEditor(c);
 }
 async function uploadImage(blob){
   const path = me.id + '/' + Date.now() + '.jpg';
   const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
   if (error) { toast('Upload failed: ' + error.message); return null; }
   return sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- photo editor: Snapchat-style text + freehand drawing ----------
+   Opens on every captured or uploaded photo. Text overlays live as DOM
+   elements over the canvas (draggable, recolorable, two styles: the
+   classic full-width band and big outlined text); drawing strokes are
+   painted straight onto the canvas over a pristine copy of the photo.
+   Done flattens everything into one JPEG and hands it to the send sheet. */
+const EDIT_COLORS = ['#ffffff','#000000','#ffd60a','#ff3b30','#ff9500','#34c759','#0fadff','#8329c9','#ff5da2'];
+let editState = null;   // { base, strokes, texts, selected, drawing, penColor, current, dispW }
+let editingText = null; // text overlay currently being typed into
+
+function wireEditor(){
+  setIco($('btn-edit-close'), 'x'); setIco($('btn-edit-undo'), 'undo'); setIco($('btn-edit-draw'), 'pencil');
+  $('btn-edit-close').onclick = closeEditor;
+  $('btn-edit-done').onclick = finishEditor;
+  $('btn-edit-text').onclick = () => addEditText();
+  $('btn-edit-draw').onclick = toggleDrawMode;
+  $('btn-edit-undo').onclick = undoStroke;
+  $('btn-edit-input-done').onclick = commitEditText;
+  $('edit-input').addEventListener('input', () => {
+    const inp = $('edit-input');
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(110, inp.scrollHeight) + 'px';
+  });
+  $('edit-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEditText(); }
+  });
+  const cv = $('edit-canvas');
+  cv.addEventListener('pointerdown', onDrawStart);
+  cv.addEventListener('pointermove', onDrawMove);
+  cv.addEventListener('pointerup', onDrawEnd);
+  cv.addEventListener('pointercancel', onDrawEnd);
+  $('edit-stage').addEventListener('pointerdown', (e) => {
+    if (e.target === $('edit-stage') || e.target === $('edit-wrap') || e.target === $('edit-texts')) selectEditText(null);
+  });
+}
+function openEditor(source){
+  const base = document.createElement('canvas');
+  base.width = source.width; base.height = source.height;
+  base.getContext('2d').drawImage(source, 0, 0);
+  editState = { base, strokes: [], texts: [], selected: null, drawing: false, penColor: '#ffffff', current: null, dispW: 0 };
+  editingText = null;
+  $('edit-texts').innerHTML = '';
+  $('edit-texts').classList.remove('locked');
+  hide($('edit-input-wrap'));
+  const cv = $('edit-canvas');
+  cv.width = base.width; cv.height = base.height;
+  show($('screen-editor'));
+  // Fit the photo into the space between the tool bars.
+  const stage = $('edit-stage');
+  const availW = stage.clientWidth || window.innerWidth;
+  const availH = stage.clientHeight || Math.max(200, window.innerHeight - 200);
+  const s = Math.min(availW / base.width, availH / base.height);
+  const dispW = Math.max(60, Math.round(base.width * s));
+  const dispH = Math.max(60, Math.round(base.height * s));
+  cv.style.width = dispW + 'px'; cv.style.height = dispH + 'px';
+  $('edit-wrap').style.width = dispW + 'px'; $('edit-wrap').style.height = dispH + 'px';
+  editState.dispW = dispW;
+  redrawEditCanvas();
+  updateEditorTools();
+}
+function closeEditor(){
+  hide($('edit-input-wrap'));
+  hide($('screen-editor'));
+  editState = null; editingText = null;
+}
+function redrawEditCanvas(){
+  if (!editState) return;
+  const cv = $('edit-canvas'), ctx = cv.getContext('2d');
+  ctx.drawImage(editState.base, 0, 0);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  editState.strokes.forEach(st => {
+    ctx.strokeStyle = st.color; ctx.lineWidth = st.width;
+    ctx.beginPath();
+    st.points.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+    if (st.points.length === 1) ctx.lineTo(st.points[0].x + 0.1, st.points[0].y + 0.1);
+    ctx.stroke();
+  });
+  $('btn-edit-undo').disabled = !editState.strokes.length;
+}
+function updateEditorTools(){
+  const es = editState;
+  $('btn-edit-draw').classList.toggle('on', !!es && es.drawing);
+  $('btn-edit-undo').disabled = !es || !es.strokes.length;
+  renderEditColors();
+}
+function renderEditColors(){
+  const es = editState, row = $('edit-colors');
+  const showRow = !!es && (es.drawing || !!es.selected);
+  row.classList.toggle('hidden', !showRow);
+  if (!showRow) return;
+  row.innerHTML = '';
+  const activeColor = es.drawing ? es.penColor : es.selected.color;
+  EDIT_COLORS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'swatch' + (c === activeColor ? ' on' : '');
+    b.style.background = c;
+    b.setAttribute('aria-label', 'Color');
+    b.onclick = () => {
+      if (es.drawing) es.penColor = c;
+      if (es.selected) { es.selected.color = c; layoutEditText(es.selected); }
+      renderEditColors();
+    };
+    row.appendChild(b);
+  });
+  if (es.selected) {
+    const styleBtn = document.createElement('button');
+    styleBtn.className = 'edit-tool-btn'; styleBtn.textContent = 'Style';
+    styleBtn.onclick = () => {
+      const t = es.selected;
+      t.style = t.style === 'band' ? 'big' : 'band';
+      if (t.style === 'band') t.x = 0.5;
+      layoutEditText(t);
+    };
+    row.appendChild(styleBtn);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'edit-tool-btn'; delBtn.innerHTML = IC.trash + '<span>Delete</span>';
+    delBtn.onclick = () => removeEditText(es.selected);
+    row.appendChild(delBtn);
+  }
+}
+/* ----- text overlays ----- */
+function layoutEditText(t){
+  const es = editState; if (!es) return;
+  const el = t.el;
+  el.style.fontSize = Math.max(13, Math.round(es.dispW * t.fontFrac)) + 'px';
+  el.style.color = t.color;
+  el.textContent = t.text || 'Text';
+  el.style.opacity = t.text ? '1' : '.65';
+  el.className = 'edit-text ' + t.style + (es.selected === t ? ' sel' : '');
+  el.style.top = (t.y * 100) + '%';
+  el.style.left = ((t.style === 'band' ? 0.5 : t.x) * 100) + '%';
+}
+function selectEditText(t){
+  const es = editState; if (!es) return;
+  es.selected = t;
+  es.texts.forEach(x => layoutEditText(x));
+  renderEditColors();
+}
+function addEditText(){
+  const es = editState; if (!es) return;
+  if (es.drawing) toggleDrawMode();
+  const t = { text: '', color: '#ffffff', style: 'band', x: 0.5, y: 0.42, fontFrac: 0.062, el: document.createElement('div') };
+  es.texts.push(t);
+  $('edit-texts').appendChild(t.el);
+  wireTextEl(t);
+  selectEditText(t);
+  openTextInput(t);
+}
+function removeEditText(t){
+  const es = editState; if (!es) return;
+  es.texts = es.texts.filter(x => x !== t);
+  t.el.remove();
+  if (es.selected === t) es.selected = null;
+  if (editingText === t) { editingText = null; hide($('edit-input-wrap')); }
+  renderEditColors();
+}
+function wireTextEl(t){
+  const el = t.el;
+  let drag = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (!editState || editState.drawing) return;
+    e.preventDefault();
+    drag = { startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false, wasSelected: editState.selected === t };
+    selectEditText(t);
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag || !editState) return;
+    const wrap = $('edit-wrap').getBoundingClientRect();
+    const dx = (e.clientX - drag.lastX) / wrap.width;
+    const dy = (e.clientY - drag.lastY) / wrap.height;
+    if (Math.abs(e.clientX - drag.startX) + Math.abs(e.clientY - drag.startY) > 7) drag.moved = true;
+    drag.lastX = e.clientX; drag.lastY = e.clientY;
+    if (drag.moved) {
+      if (t.style !== 'band') t.x = Math.min(0.97, Math.max(0.03, t.x + dx));
+      t.y = Math.min(0.97, Math.max(0.03, t.y + dy));
+      layoutEditText(t);
+    }
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    const tapEdit = drag.wasSelected && !drag.moved;
+    drag = null;
+    if (tapEdit) openTextInput(t);
+  };
+  el.addEventListener('pointerup', endDrag);
+  el.addEventListener('pointercancel', () => { drag = null; });
+}
+function openTextInput(t){
+  editingText = t;
+  const inp = $('edit-input');
+  inp.value = t.text || '';
+  show($('edit-input-wrap'));
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(110, inp.scrollHeight) + 'px';
+  setTimeout(() => { try { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {} }, 60);
+}
+function commitEditText(){
+  hide($('edit-input-wrap'));
+  const t = editingText; editingText = null;
+  if (document.activeElement) document.activeElement.blur();
+  if (!t || !editState) return;
+  t.text = $('edit-input').value.trim();
+  if (!t.text) { removeEditText(t); return; }
+  layoutEditText(t);
+}
+/* ----- drawing ----- */
+function toggleDrawMode(){
+  const es = editState; if (!es) return;
+  es.drawing = !es.drawing;
+  if (es.drawing) selectEditText(null);
+  $('edit-texts').classList.toggle('locked', es.drawing);
+  updateEditorTools();
+}
+function canvasPoint(e){
+  const cv = $('edit-canvas'), r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
+}
+function onDrawStart(e){
+  const es = editState;
+  if (!es || !es.drawing) return;
+  e.preventDefault();
+  const st = { color: es.penColor, width: Math.max(3, Math.round($('edit-canvas').width * 0.011)), points: [canvasPoint(e)] };
+  es.strokes.push(st); es.current = st;
+  try { $('edit-canvas').setPointerCapture(e.pointerId); } catch (err) {}
+  redrawEditCanvas();
+}
+function onDrawMove(e){
+  const es = editState;
+  if (!es || !es.current) return;
+  es.current.points.push(canvasPoint(e));
+  redrawEditCanvas();
+}
+function onDrawEnd(){
+  if (editState) { editState.current = null; updateEditorTools(); }
+}
+function undoStroke(){
+  const es = editState; if (!es || !es.strokes.length) return;
+  es.strokes.pop();
+  redrawEditCanvas();
+}
+/* ----- flatten + send ----- */
+function drawTextExport(ctx, t, W, H){
+  const fontPx = Math.round(t.fontFrac * W);
+  ctx.font = '800 ' + fontPx + 'px "Helvetica Neue",Helvetica,Arial,sans-serif';
+  const maxW = W * (t.style === 'band' ? 0.9 : 0.94);
+  const lines = [];
+  t.text.split('\n').forEach(part => {
+    const words = part.split(/\s+/).filter(Boolean);
+    if (!words.length) { lines.push(''); return; }
+    let line = '';
+    words.forEach(w => {
+      const test = line ? line + ' ' + w : w;
+      if (line && ctx.measureText(test).width > maxW) { lines.push(line); line = w; }
+      else line = test;
+    });
+    if (line) lines.push(line);
+  });
+  if (!lines.length) return;
+  const lh = fontPx * 1.25;
+  const blockH = lines.length * lh;
+  const cx = (t.style === 'band' ? 0.5 : t.x) * W;
+  const cy = t.y * H;
+  if (t.style === 'band') {
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.fillRect(0, cy - blockH / 2 - fontPx * 0.3, W, blockH + fontPx * 0.6);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach((ln, i) => {
+    if (!ln) return;
+    const y = cy - blockH / 2 + lh * (i + 0.5);
+    if (t.style === 'big') {
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(2, fontPx * 0.18);
+      ctx.strokeStyle = 'rgba(0,0,0,.85)';
+      ctx.strokeText(ln, cx, y);
+    }
+    ctx.fillStyle = t.color;
+    ctx.fillText(ln, cx, y);
+  });
+}
+async function finishEditor(){
+  if (!editState) return;
+  if (!$('edit-input-wrap').classList.contains('hidden')) commitEditText();
+  if (!editState) return;
+  const out = document.createElement('canvas');
+  out.width = editState.base.width; out.height = editState.base.height;
+  const ctx = out.getContext('2d');
+  ctx.drawImage($('edit-canvas'), 0, 0);
+  editState.texts.forEach(t => { if (t.text) drawTextExport(ctx, t, out.width, out.height); });
+  closeEditor();
+  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.85));
+  if (!blob) { toast('Could not save photo'); return; }
+  toast('Uploading Photo…');
+  const url = await uploadImage(blob);
+  if (url) openSendSheet(url);
 }
 
 /* ---------- send sheet ---------- */
@@ -2113,7 +2474,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.16.2355';
+const BLIP_VERSION = '2026.10.17.0012';
 let updateAvailable = false;
 let updateDismissed = false;
 async function checkForUpdate(){
@@ -2163,7 +2524,7 @@ function syncRootBg(){
   const vis = (id) => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
   let c = '#ffffff';
   if (vis('screen-call')) c = '#101318';
-  else if (vis('screen-story') || vis('screen-photo')) c = '#000000';
+  else if (vis('screen-story') || vis('screen-photo') || vis('screen-editor')) c = '#000000';
   else if (vis('screen-splash') || vis('screen-auth')) c = '#1e90ff';
   document.documentElement.style.setProperty('--root-bg', c);
 }
