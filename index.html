@@ -243,7 +243,7 @@ img{display:block}
 .story-chip .plus{position:absolute;right:-1px;bottom:-1px;width:20px;height:20px;border-radius:50%;background:var(--chat);color:#fff;border:2.5px solid var(--bg);display:flex;align-items:center;justify-content:center}
 .story-chip .plus svg{width:11px;height:11px}
 .ring-wrap{position:relative}
-.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:2px 16px 20px}
+.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:2px 16px 20px;align-items:start}
 .story-card{border-radius:16px;overflow:hidden;position:relative;aspect-ratio:3/4.1;background:#222;cursor:pointer;text-align:left;width:100%}
 .story-card img.ph,.story-card video.ph{width:100%;height:100%;object-fit:cover}
 .story-card .sc-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.34),transparent 42%,transparent 62%,rgba(0,0,0,.5))}
@@ -346,16 +346,17 @@ img{display:block}
 
 /* ---------- photo editor ---------- */
 #screen-editor{z-index:45;background:#000}
-.edit-top{position:relative;z-index:3;display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 6px}
+.edit-top{position:relative;z-index:3;display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 6px;background:linear-gradient(180deg,rgba(0,0,0,.38),transparent)}
+.edit-dock{position:relative;z-index:3;margin-top:auto;background:linear-gradient(0deg,rgba(0,0,0,.38),transparent)}
 .edit-top .sp{flex:1}
 .edit-t{font-size:21px;font-weight:800;line-height:1}
 .edit-back{display:flex;align-items:center;gap:1px;height:42px;padding:0 17px 0 9px;border-radius:999px;background:rgba(0,0,0,.38);color:#fff;font-weight:800;font-size:15.5px;backdrop-filter:blur(3px);transition:background .15s,transform .1s}
 .edit-back:active{transform:scale(.94)}
 .edit-back svg{width:21px;height:21px}
 .cam-ctl:disabled{opacity:.35}
-.edit-stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;width:100%}
+.edit-stage{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .edit-wrap{position:relative;flex:none;line-height:0}
-#edit-canvas{display:block;border-radius:4px;touch-action:none;background:#111}
+#edit-canvas{display:block;touch-action:none;background:#111}
 #edit-texts{position:absolute;inset:0;overflow:hidden}
 #edit-texts.locked{pointer-events:none}
 .edit-text{position:absolute;transform:translate(-50%,-50%);font-weight:800;text-align:center;line-height:1.25;white-space:pre-wrap;word-break:break-word;padding:.28em .45em;border-radius:.18em;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;max-width:94%}
@@ -375,7 +376,7 @@ img{display:block}
 .edit-tool-btn{flex:none;display:flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.16);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700}
 .edit-tool-btn svg{width:16px;height:16px}
 .edit-bottom{flex:none;display:flex;justify-content:flex-end;padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
-#edit-video{display:block;border-radius:4px;background:#111;touch-action:none}
+#edit-video{display:block;background:#111;touch-action:none}
 #edit-draw{position:absolute;left:0;top:0;touch-action:none}
 .edit-export{position:absolute;inset:0;z-index:6;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff}
 .edit-export p{margin:0;font-size:15.5px;font-weight:700}
@@ -422,13 +423,25 @@ img{display:block}
 .bubble-row + .bubble-row{margin-top:2px}
 .bubble-row.gap{margin-top:12px}
 .btime{font-size:11px;color:var(--ink3);margin:3px 4px 0;font-weight:500}
-.photo-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:16px;background:var(--soft);cursor:pointer;min-width:190px}
-.bubble-row.me .photo-card{background:rgba(11,173,255,.14)}
-.photo-ico{width:42px;height:42px;border-radius:11px;background:var(--photo);display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
-.photo-ico svg{width:22px;height:22px}
-.photo-card b{font-size:14.5px;display:block}
-.photo-card small{font-size:12.5px;color:var(--ink2);font-weight:600}
-.photo-card.seen .photo-ico{background:var(--bg);color:var(--photo);box-shadow:inset 0 0 0 2px var(--photo)}
+.bubble-media{position:relative;line-height:0;max-width:100%}
+.bubble-photo{display:block;width:100%;height:auto;border-radius:18px;cursor:pointer;background:#111}
+.bubble-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.bubble-play i{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.bubble-play svg{width:24px;height:24px;margin-left:3px}
+/* ---------- message reactions ---------- */
+.bubble-row{position:relative}
+.bubble,.bubble-photo{-webkit-touch-callout:none}
+.react-bar{display:none;align-items:center;gap:3px;margin-top:-8px;z-index:1;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:13.5px;line-height:1.3;box-shadow:0 2px 8px rgba(0,0,0,.10)}
+.react-bar.on{display:flex}
+.bubble-row.me .react-bar{margin-right:10px}
+.bubble-row.them .react-bar{margin-left:10px}
+.react-bar .rc{font-size:11.5px;color:var(--ink2);font-weight:700;margin-left:1px}
+.react-pop{position:absolute;z-index:5;font-size:44px;line-height:1;pointer-events:none;transform:translate(-50%,-50%);animation:reactPop .7s ease-out forwards}
+@keyframes reactPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}25%{opacity:1;transform:translate(-50%,-60%) scale(1.25)}55%{transform:translate(-50%,-66%) scale(1)}100%{opacity:0;transform:translate(-50%,-100%) scale(1.05)}}
+#react-picker{position:absolute;z-index:30;display:flex;gap:2px;background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:6px 8px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#react-picker button{font-size:25px;line-height:1;padding:5px 6px;border-radius:50%;transition:transform .1s,background .15s}
+#react-picker button:active{transform:scale(1.25)}
+#react-picker button.mine{background:var(--soft);box-shadow:inset 0 0 0 2px var(--chat)}
 .thread-input{flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
 .thread-input .pill{flex:1;display:flex;align-items:center;background:var(--soft);border-radius:999px;padding:4px 6px 4px 16px;gap:6px}
 .thread-input input{flex:1;font-size:16px;padding:8px 0;outline:none;min-width:0}
@@ -457,7 +470,7 @@ img{display:block}
 .btn-ghost{color:var(--ink2);font-weight:700}
 .btn-danger-t{color:var(--danger);font-weight:700}
 .sheet .stack{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.send-preview{width:100%;max-height:300px;object-fit:cover;border-radius:16px;margin-bottom:6px;background:#111}
+.send-preview{width:100%;height:auto;max-height:50vh;object-fit:contain;border-radius:16px;margin-bottom:6px;background:#111}
 .pick-row{display:flex;align-items:center;gap:12px;padding:9px 2px;cursor:pointer;border-radius:12px}
 .pick-row:active{background:var(--soft)}
 .pick-row .row-main b{font-size:16px;display:block}
@@ -701,6 +714,7 @@ img{display:block}
         <button type="submit" class="send-btn" id="btn-thread-send" aria-label="Send"></button>
       </div>
     </form>
+    <div id="react-picker" class="hidden" role="menu" aria-label="Choose a reaction"></div>
   </div>
 
   <!-- ============ PROFILE ============ -->
@@ -779,10 +793,12 @@ img{display:block}
         <div id="edit-texts"></div>
       </div>
     </div>
-    <div class="edit-colors hidden" id="edit-colors"></div>
-    <div class="edit-fonts hidden" id="edit-fonts"></div>
-    <div class="edit-bottom">
-      <button class="btn-white" id="btn-edit-done">Send</button>
+    <div class="edit-dock">
+      <div class="edit-colors hidden" id="edit-colors"></div>
+      <div class="edit-fonts hidden" id="edit-fonts"></div>
+      <div class="edit-bottom">
+        <button class="btn-white" id="btn-edit-done">Send</button>
+      </div>
     </div>
     <div id="edit-export" class="edit-export hidden"><div class="spinner"></div><p id="edit-export-txt">Preparing Video…</p></div>
   </div>
@@ -1869,6 +1885,11 @@ function wireChat(){
   $('btn-thread-call').onclick = () => startCall('audio');
   $('btn-thread-video').onclick = () => startCall('video');
   $('btn-thread-cam').onclick = () => { closeThread(); switchView('view-camera'); };
+  $('thread-messages').addEventListener('scroll', closeReactPicker, { passive: true });
+  $('screen-thread').addEventListener('pointerdown', (e) => {
+    const pk = $('react-picker');
+    if (pk && !pk.classList.contains('hidden') && !pk.contains(e.target)) closeReactPicker();
+  });
   $('thread-form').onsubmit = async (e) => {
     e.preventDefault();
     const t = $('thread-text').value.trim();
@@ -1878,6 +1899,7 @@ function wireChat(){
   };
 }
 function closeThread(){
+  closeReactPicker();
   threadOther = null;
   hide($('screen-thread')); show($('screen-main'));
   loadChats();
@@ -1912,6 +1934,7 @@ async function loadThreadMessages(){
     box.appendChild(bubble(m, m.sender_id !== lastSender));
     lastSender = m.sender_id;
   });
+  loadReactionsFor((data || []).map(x => x.id));
 }
 function bubble(m, gap){
   const mine = m.sender_id === me.id;
@@ -1919,23 +1942,38 @@ function bubble(m, gap){
   row.className = 'bubble-row ' + (mine ? 'me' : 'them') + (gap ? ' gap' : '');
   row.dataset.mid = m.id;
   if (m.image_url) {
-    const seen = mine || (openedMap[m.sender_id] && new Date(m.created_at) <= new Date(openedMap[m.sender_id]));
-    const card = document.createElement('div');
-    card.className = 'photo-card' + (seen ? ' seen' : '');
-    if (isVideoUrl(m.image_url)) {
-      card.innerHTML = '<span class="photo-ico">' + IC.play + '</span><span><b>' + (mine ? 'Video Message' : 'New Video') + '</b><small>' + (seen ? 'Opened · ' : 'Tap to watch · ') + relTime(m.created_at) + '</small></span>';
-      card.onclick = () => openVideoMessage(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
-    } else {
-      card.innerHTML = '<span class="photo-ico">' + IC.photoSq + '</span><span><b>' + (mine ? 'Photo Message' : 'New Message') + '</b><small>' + (seen ? 'Opened · ' : 'Tap to view · ') + relTime(m.created_at) + '</small></span>';
-      card.onclick = () => openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
+    // The photo itself, at its own proportions — not an icon box.
+    // Tapping it still opens the fullscreen viewer.
+    const vid = isVideoUrl(m.image_url);
+    const holder = document.createElement('div');
+    holder.className = 'bubble-media';
+    const media = document.createElement(vid ? 'video' : 'img');
+    media.className = 'bubble-photo';
+    media.src = cleanMediaUrl(m.image_url);
+    media.alt = vid ? 'Video message' : (mine ? 'Photo you sent' : 'Photo message');
+    if (vid) { media.muted = true; media.playsInline = true; media.preload = 'metadata'; }
+    holder.appendChild(media);
+    if (vid) {
+      const badge = document.createElement('span');
+      badge.className = 'bubble-play';
+      badge.innerHTML = '<i>' + IC.play + '</i>';
+      holder.appendChild(badge);
     }
-    row.appendChild(card);
+    wireMessageGestures(holder, m, () => vid
+      ? openVideoMessage(m, mine ? me : (profilesCache[m.sender_id] || threadOther))
+      : openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther)));
+    row.appendChild(holder);
   }
   if (m.body) {
     const b = document.createElement('div');
     b.className = 'bubble'; b.textContent = m.body;
+    wireMessageGestures(b, m, null);
     row.appendChild(b);
   }
+  const rb = document.createElement('div');
+  rb.className = 'react-bar';
+  row.appendChild(rb);
+  renderReactions(row, m.id);
   const t = document.createElement('div');
   t.className = 'btime'; t.textContent = fullTime(m.created_at);
   row.appendChild(t);
@@ -1956,6 +1994,152 @@ async function sendMessage(receiverId, body, imageUrl){
   if (error) { toast('Could not send: ' + error.message); return; }
   const tmpEl = document.querySelector('[data-mid="' + temp.id + '"]');
   if (tmpEl) tmpEl.dataset.mid = data.id;
+}
+
+/* ---------- message reactions ----------
+   One reaction per person per message, stored in blip_reactions
+   (message_id + user_id primary key). Double-tap a message to heart
+   it; hold a message to pick from the emoji bar. Tapping the emoji
+   you already picked takes it back off. Needs the one-time table
+   setup — until then saves fail quietly and the heart rolls back. */
+const REACT_EMOJIS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
+let reactionsByMsg = {};   // messageId -> { userId: emoji }
+let reactWarned = false;
+let pickerFor = null;
+
+function renderReactions(row, mid){
+  const bar = row.querySelector('.react-bar'); if (!bar) return;
+  const map = reactionsByMsg[mid] || {};
+  const counts = {}, order = [];
+  Object.keys(map).forEach(uid => {
+    const em = map[uid];
+    if (!(em in counts)) { counts[em] = 0; order.push(em); }
+    counts[em]++;
+  });
+  bar.innerHTML = '';
+  if (!order.length) { bar.classList.remove('on'); return; }
+  order.forEach(em => {
+    const s = document.createElement('span');
+    s.textContent = em;
+    if (counts[em] > 1) {
+      const c = document.createElement('span');
+      c.className = 'rc'; c.textContent = counts[em];
+      s.appendChild(c);
+    }
+    bar.appendChild(s);
+  });
+  bar.classList.add('on');
+}
+async function loadReactionsFor(ids){
+  const real = (ids || []).filter(id => id && String(id).indexOf('tmp-') !== 0);
+  if (!real.length || !sb) return;
+  const { data, error } = await sb.from('blip_reactions').select('*').in('message_id', real);
+  if (error) return; // table not set up yet — reactions stay dormant
+  (data || []).forEach(r => {
+    (reactionsByMsg[r.message_id] = reactionsByMsg[r.message_id] || {})[r.user_id] = r.emoji;
+  });
+  real.forEach(id => {
+    const row = document.querySelector('[data-mid="' + id + '"]');
+    if (row) renderReactions(row, id);
+  });
+}
+async function setReaction(m, emoji){
+  if (!m || !m.id || String(m.id).indexOf('tmp-') === 0 || !sb) return;
+  const mid = m.id;
+  const prev = reactionsByMsg[mid] ? Object.assign({}, reactionsByMsg[mid]) : {};
+  const removing = prev[me.id] === emoji;
+  reactionsByMsg[mid] = reactionsByMsg[mid] || {};
+  if (removing) delete reactionsByMsg[mid][me.id]; else reactionsByMsg[mid][me.id] = emoji;
+  const row = document.querySelector('[data-mid="' + mid + '"]');
+  if (row) renderReactions(row, mid);
+  const res = removing
+    ? await sb.from('blip_reactions').delete().eq('message_id', mid).eq('user_id', me.id)
+    : await sb.from('blip_reactions').upsert(
+        { message_id: mid, user_id: me.id, emoji: emoji },
+        { onConflict: 'message_id,user_id' });
+  if (res.error) {
+    reactionsByMsg[mid] = prev;
+    if (row) renderReactions(row, mid);
+    if (!reactWarned) { reactWarned = true; toast('Could not save that reaction'); }
+  }
+}
+function heartBurst(el){
+  const host = el.closest('.bubble-row'); if (!host) return;
+  const s = document.createElement('span');
+  s.className = 'react-pop'; s.textContent = '❤️';
+  const r = el.getBoundingClientRect(), hr = host.getBoundingClientRect();
+  s.style.left = (r.left - hr.left + r.width / 2) + 'px';
+  s.style.top = (r.top - hr.top + r.height / 2) + 'px';
+  host.appendChild(s);
+  setTimeout(() => s.remove(), 750);
+}
+/* Gestures on one message surface (text bubble or photo/video):
+   double-tap hearts it, a 480ms hold opens the emoji picker, and a
+   plain tap runs tapAction (opening the photo viewer) — delayed just
+   enough to tell a double-tap apart from a single one. */
+const tapState = {};   // mid -> { last, timer }
+function wireMessageGestures(el, m, tapAction){
+  if (!el || !m || !m.id) return;
+  const mid = m.id;
+  let lpTimer = null, startX = 0, startY = 0, lpFired = false;
+  el.addEventListener('pointerdown', (e) => {
+    startX = e.clientX; startY = e.clientY; lpFired = false;
+    clearTimeout(lpTimer);
+    lpTimer = setTimeout(() => { lpFired = true; openReactPicker(m, el); }, 480);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) clearTimeout(lpTimer);
+  });
+  el.addEventListener('pointerup', (e) => {
+    clearTimeout(lpTimer);
+    if (lpFired) { e.preventDefault(); return; }
+    if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) return;
+    const now = Date.now();
+    const st = tapState[mid] || (tapState[mid] = { last: 0, timer: null });
+    if (now - st.last < 330) {
+      st.last = 0;
+      if (st.timer) { clearTimeout(st.timer); st.timer = null; }
+      heartBurst(el);
+      setReaction(m, '❤️');
+    } else {
+      st.last = now;
+      if (tapAction) {
+        if (st.timer) clearTimeout(st.timer);
+        st.timer = setTimeout(() => { st.timer = null; st.last = 0; tapAction(); }, 300);
+      }
+    }
+  });
+  el.addEventListener('pointercancel', () => clearTimeout(lpTimer));
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+function openReactPicker(m, anchorEl){
+  closeReactPicker();
+  pickerFor = m;
+  const pk = $('react-picker');
+  pk.innerHTML = '';
+  const mine = (reactionsByMsg[m.id] || {})[me.id];
+  REACT_EMOJIS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = em;
+    if (em === mine) btn.className = 'mine';
+    btn.setAttribute('aria-label', 'React with ' + em);
+    btn.onclick = () => { closeReactPicker(); setReaction(m, em); };
+    pk.appendChild(btn);
+  });
+  pk.classList.remove('hidden');
+  const scr = $('screen-thread').getBoundingClientRect();
+  const r = anchorEl.getBoundingClientRect();
+  const pw = pk.offsetWidth, ph = pk.offsetHeight;
+  let x = r.left - scr.left + r.width / 2 - pw / 2;
+  x = Math.max(8, Math.min(x, scr.width - pw - 8));
+  let y = r.top - scr.top - ph - 10;
+  if (y < 8) y = r.bottom - scr.top + 10;
+  pk.style.left = x + 'px'; pk.style.top = y + 'px';
+}
+function closeReactPicker(){
+  pickerFor = null;
+  const pk = $('react-picker');
+  if (pk) pk.classList.add('hidden');
 }
 
 /* ---------- photo message viewer ---------- */
@@ -2022,6 +2206,17 @@ function subscribeRealtime(){
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_stories' }, () => {
       if (activeView === 'view-stories') loadStories();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'blip_reactions' }, (p) => {
+      const r = p.eventType === 'DELETE' ? p.old : p.new;
+      if (!r || !r.message_id || !r.user_id) return;
+      if (p.eventType === 'DELETE') {
+        if (reactionsByMsg[r.message_id]) delete reactionsByMsg[r.message_id][r.user_id];
+      } else {
+        (reactionsByMsg[r.message_id] = reactionsByMsg[r.message_id] || {})[r.user_id] = r.emoji;
+      }
+      const row = document.querySelector('[data-mid="' + r.message_id + '"]');
+      if (row) renderReactions(row, r.message_id);
     })
     .subscribe();
 }
@@ -2272,7 +2467,16 @@ function wireShutter(){
   const btn = $('btn-shutter');
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault(); // no long-press highlight / callout while holding
-    if (callState || camFlipping || shutterPress || recState) return;
+    if (callState || camFlipping) return;
+    // A tap while a recording is live (or still starting) stops it.
+    // Hold-to-record is the primary gesture, but if the release ever
+    // gets lost — a system interruption, a permission prompt eating
+    // the touch — a plain tap is the user's obvious way out, and it
+    // used to be swallowed whole because recState was set. This check
+    // runs before the shutterPress guard on purpose: a lost release
+    // leaves a stale press behind, and the rescue tap must still land.
+    if (recState) { stopRecording(); return; }
+    if (shutterPress) return;
     try { btn.setPointerCapture(e.pointerId); } catch (err) {}
     const press = { timer: null, fired: false };
     shutterPress = press;
@@ -2300,7 +2504,7 @@ async function startRecording(){
   if (recState) return;
   if (typeof MediaRecorder === 'undefined') { toast('Video recording is not supported on this device'); return; }
   if (!camStream || !camStream.getVideoTracks().length) { show($('cam-off')); return; }
-  const rec = { mr: null, chunks: [], mime: '', startedAt: 0, timer: null, autoTimer: null, stopWanted: false };
+  const rec = { mr: null, chunks: [], mime: '', startedAt: 0, timer: null, autoTimer: null, stopFallback: null, stopWanted: false };
   recState = rec;
   let stream = null;
   try { stream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints(), audio: true }); }
@@ -2325,12 +2529,19 @@ async function startRecording(){
   rec.mime = mr.mimeType || 'video/mp4';
   mr.ondataavailable = (e) => { if (e.data && e.data.size) rec.chunks.push(e.data); };
   mr.onstop = () => finishRecording(rec);
+  mr.onerror = () => finishRecording(rec);
   try { mr.start(250); } catch (e) { recState = null; toast('Video recording is not supported on this device'); return; }
   rec.startedAt = Date.now();
   $('btn-shutter').classList.add('recording');
   $('rec-time').textContent = '0:00';
   show($('rec-bar'));
-  rec.timer = setInterval(() => { $('rec-time').textContent = fmtDur(Math.floor((Date.now() - rec.startedAt) / 1000)); }, 200);
+  rec.timer = setInterval(() => {
+    const el = Math.floor((Date.now() - rec.startedAt) / 1000);
+    $('rec-time').textContent = fmtDur(el);
+    // The cap is enforced here as well as by the auto-stop timer, so
+    // the on-screen clock can never run visibly past 30 seconds.
+    if (el * 1000 >= REC_MAX_MS) stopRecording();
+  }, 200);
   rec.autoTimer = setTimeout(() => { if (recState === rec) stopRecording(); }, REC_MAX_MS);
   if (rec.stopWanted || !shutterPress) stopRecording();
 }
@@ -2338,12 +2549,23 @@ function stopRecording(){
   const rec = recState; if (!rec) return;
   if (!rec.mr) { rec.stopWanted = true; return; }
   clearTimeout(rec.autoTimer);
-  if (rec.mr.state !== 'inactive') { try { rec.mr.stop(); } catch (e) { finishRecording(rec); } }
+  // If the recorder already stopped on its own — iOS ends the capture
+  // tracks on an interruption, which can leave the recorder inactive
+  // without onstop ever reaching us — finalize right here with what
+  // was captured. The old code simply did nothing in that case:
+  // recState stayed set, the timer kept counting past the 30s cap,
+  // and every later tap was ignored because a recording was "live".
+  if (rec.mr.state === 'inactive') { finishRecording(rec); return; }
+  try { rec.mr.stop(); } catch (e) { finishRecording(rec); return; }
+  // Normally stop() fires onstop, which finishes. Arm a fallback so
+  // a stop event that never arrives can never wedge the recording UI.
+  clearTimeout(rec.stopFallback);
+  rec.stopFallback = setTimeout(() => { if (recState === rec) finishRecording(rec); }, 900);
 }
 function finishRecording(rec){
   if (recState !== rec) return;
   recState = null;
-  clearInterval(rec.timer); clearTimeout(rec.autoTimer);
+  clearInterval(rec.timer); clearTimeout(rec.autoTimer); clearTimeout(rec.stopFallback);
   $('btn-shutter').classList.remove('recording');
   hide($('rec-bar'));
   const dur = rec.startedAt ? (Date.now() - rec.startedAt) / 1000 : 0;
@@ -2417,10 +2639,12 @@ function openEditor(source){
   const cv = $('edit-canvas');
   cv.width = base.width; cv.height = base.height;
   show($('screen-editor'));
-  // Fit the photo into the space between the tool bars.
+  // The photo keeps its own proportions and is shown as large as the
+  // whole screen allows — the tool bars float over it instead of
+  // squeezing it into the strip left between them.
   const stage = $('edit-stage');
   const availW = stage.clientWidth || window.innerWidth;
-  const availH = stage.clientHeight || Math.max(200, window.innerHeight - 200);
+  const availH = stage.clientHeight || window.innerHeight;
   const s = Math.min(availW / base.width, availH / base.height);
   const dispW = Math.max(60, Math.round(base.width * s));
   const dispH = Math.max(60, Math.round(base.height * s));
@@ -2452,9 +2676,11 @@ function openVideoEditor(blob){
     dc.classList.remove('hidden');
     dc.width = W; dc.height = H;
     show($('screen-editor'));
+    // Same as photos: the clip keeps its own proportions, shown as
+    // large as the whole screen allows.
     const stage = $('edit-stage');
     const availW = stage.clientWidth || window.innerWidth;
-    const availH = stage.clientHeight || Math.max(200, window.innerHeight - 200);
+    const availH = stage.clientHeight || window.innerHeight;
     const s = Math.min(availW / W, availH / H);
     const dispW = Math.max(60, Math.round(W * s));
     const dispH = Math.max(60, Math.round(H * s));
@@ -2985,6 +3211,17 @@ async function loadStories(){
       '<div class="sc-who">' + avatarHTML(p, 'sm') + '<b>' + esc(p.display_name) + '</b></div>' +
       '<div class="sc-when">' + relTime(latest.created_at) + ' ago</div>' +
       (stories.length > 1 ? '<div class="sc-count">' + stories.length + ' Stories</div>' : '');
+    // Size the card from the photo's own proportions once they are
+    // known, so the story shows at the size it was taken — the fixed
+    // 3/4.1 box in the CSS is only the pre-load placeholder.
+    const ph = card.querySelector('.ph');
+    const fitCard = () => {
+      const w = ph.naturalWidth || ph.videoWidth, h = ph.naturalHeight || ph.videoHeight;
+      if (w && h) card.style.aspectRatio = Math.min(1.9, Math.max(0.5, w / h)).toFixed(3) + ' / 1';
+    };
+    if (ph.tagName === 'VIDEO') ph.addEventListener('loadedmetadata', fitCard);
+    else if (ph.complete && ph.naturalWidth) fitCard();
+    else ph.addEventListener('load', fitCard);
     card.querySelector('.sc-who').onclick = (e) => { e.stopPropagation(); openUserProfile(p); };
     card.onclick = () => openStoryViewer(p, [...stories].reverse());
     grid.appendChild(card);
@@ -3525,7 +3762,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.2016';
+const BLIP_VERSION = '2026.10.17.2145';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
