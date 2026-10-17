@@ -1047,7 +1047,7 @@ setIco($('btn-update-dismiss'), 'x');
 /* ---------- state ---------- */
 let me = null;
 let authMode = 'signup';
-let activeView = 'view-camera';
+let activeView = 'view-chats';
 let threadOther = null;
 let profilesCache = {};
 let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
@@ -1263,11 +1263,11 @@ async function enterApp(user){
   loadLocal();
   refreshMyAvatars();
   hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
-  // Land on the camera — it's the first thing the app opens to.
-  // startCamera attempts the camera directly: with a grant already
-  // given, the preview is just on, with no prompt; the "Camera Is Off"
-  // state only appears after a refusal.
-  switchView('view-camera');
+  // Land on Chats — the app opens to the chat list, never the camera,
+  // so opening Blip never asks for camera permission. The camera only
+  // starts when the user taps the Camera tab (switchView starts it),
+  // and the "Camera Is Off" state only appears after a refusal there.
+  switchView('view-chats');
   loadFriends();
   loadChats(); loadStories();
   subscribeRealtime();
@@ -3526,7 +3526,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.1945';
+const BLIP_VERSION = '2026.10.17.2015';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
