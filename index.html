@@ -1051,6 +1051,9 @@ let camDenied = false;
 let camPerm = '';
 let camStarting = null;      // in-flight getUserMedia promise (single-flight)
 let camRunning = false;
+let camGen = 0;              // bumped on every stop: a start still in flight from an older generation discards its stream on arrival
+let camFlipping = false;     // a camera flip is landing — extra flip taps are dropped, never raced
+let camTicking = false;      // the preview draw loop is alive (there is never more than one)
 let storyState = { who: null, items: [], idx: 0, timer: null };
 let photoReturn = null;       // where to go after closing a photo message
 
@@ -1262,9 +1265,9 @@ function switchView(v){
   ['view-chats','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
   // Leaving the camera tab only pauses the preview render — the stream is
   // kept alive so coming back never re-asks for camera permission. Calls
-  // borrow the live stream rather than stopping it (see acquireCallStream),
-  // and a flip retargets the live track instead of restarting. The stream
-  // is fully released only on a flip fallback restart.
+  // borrow the live stream rather than stopping it (see acquireCallStream).
+  // A flip is the one place the stream is fully released and re-acquired
+  // with the other facing (see flipCamera).
   if (v === 'view-camera') startCamera(); else pauseCamera();
   if (v === 'view-chats') loadChats();
   if (v === 'view-stories') loadStories();
@@ -2014,7 +2017,7 @@ function setCamPerm(v){
 async function startCamera(explicit){
   if (camStream) {
     const vt = camStream.getVideoTracks()[0];
-    if (vt && vt.readyState === 'live') { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); return; }
+    if (vt && vt.readyState === 'live') { hide($('cam-off')); camRunning = true; kickCamTick(); return; }
     // iOS ended the tracks while the app was suspended — the stream
     // object is a corpse. Drop it and fall through to re-acquire, so
     // the preview never sits frozen on a dead stream.
@@ -2025,14 +2028,17 @@ async function startCamera(explicit){
   // explicit retry button.
   if (camDenied || camPerm === 'denied') { camDenied = true; show($('cam-off')); return; }
   // Single-flight: overlapping starts share one in-flight request, so
-  // the prompt can never fire twice back to back.
-  if (camStarting) {
+  // the prompt can never fire twice back to back. A waiter whose
+  // request was superseded while it was asking (a camera flip stopped
+  // it, so its stream was thrown away on arrival) loops around and
+  // asks again with the current facing instead of stranding the
+  // preview on the off state.
+  while (camStarting) {
     await camStarting;
-    if (camStream) { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); }
-    else show($('cam-off'));
-    return;
+    if (camStream) { hide($('cam-off')); camRunning = true; kickCamTick(); return; }
+    if (camDenied || camPerm === 'denied') { camDenied = true; show($('cam-off')); return; }
   }
-  camStarting = openCameraStream();
+  camStarting = openCameraStream(camGen);
   await camStarting;
   camStarting = null;
   if (camStream) hide($('cam-off')); else show($('cam-off'));
@@ -2055,9 +2061,10 @@ function camVideoConstraints(){
     aspectRatio: { ideal: ar }
   };
 }
-async function openCameraStream(){
+async function openCameraStream(gen){
+  let stream = null;
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints(), audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints(), audio: false });
   } catch (e) {
     // Only a refusal latches: the user said no (or the browser is
     // holding a denial), so the app never asks again uninvited. Any
@@ -2066,6 +2073,16 @@ async function openCameraStream(){
     if (e && e.name === 'NotAllowedError') { camDenied = true; setCamPerm('denied'); }
     return;
   }
+  if (gen !== camGen) {
+    // A stop or flip landed while this request was in flight: the
+    // stream is already unwanted. Release it on the spot instead of
+    // publishing it over the newer state — a stream resurrected after
+    // its stop is how racing flips used to stack up live cameras,
+    // orphaned video elements and competing draw loops.
+    stream.getTracks().forEach(t => t.stop());
+    return;
+  }
+  camStream = stream;
   setCamPerm('granted');
   // If iOS ends the track mid-session (another app grabs the camera,
   // a system interruption), revive capture right away while the
@@ -2082,29 +2099,56 @@ async function openCameraStream(){
   try { await v.play(); } catch (e) {}
   window._blipVideo = v;
   camRunning = true;
-  requestAnimationFrame(camTick);
+  kickCamTick();
 }
-/* Flip front/back WITHOUT stopping the stream: retarget the live track
-   with applyConstraints, which needs no new getUserMedia and so can
-   never re-ask for permission mid-session. Only browsers that refuse
-   the retarget fall back to a fresh stream — and that runs inside the
-   flip tap's own user activation, as an explicit start. */
+/* Flip front/back by restarting the stream with the other facingMode —
+   the only switch that actually changes cameras everywhere. The old
+   code first tried retargeting the live track with applyConstraints:
+   WebKit accepts that silently but never changes the physical camera,
+   so the flip only toggled the preview's mirror (which follows the
+   facing variable) and the picture swung left-right on the SAME
+   camera. A restart cannot re-prompt either: permission was already
+   granted this session, so the browser hands the new stream back
+   silently. Flips are serialized — a tap that lands while one is
+   still landing is dropped rather than raced, because racing flips
+   were the other half of the bug: overlapping stop/start pairs
+   interleaved until streams, video elements and draw loops piled up
+   and the preview fell apart. A flip never runs during a call, whose
+   video may be borrowing this stream's track. And if the other
+   camera cannot be opened at all (a single-camera device), the flip
+   reverts to the camera that works instead of stranding the preview
+   on the off state. */
 async function flipCamera(){
-  facing = facing === 'user' ? 'environment' : 'user';
-  const track = camStream && camStream.getVideoTracks()[0];
-  if (track && track.applyConstraints) {
-    try { await track.applyConstraints({ facingMode: facing }); return; }
-    catch (e) { /* fall through to a fresh stream */ }
-  }
-  if (camStream) { stopCamera(); startCamera(true); }
+  if (camFlipping || callState) return;
+  camFlipping = true;
+  const prev = facing;
+  facing = prev === 'user' ? 'environment' : 'user';
+  try {
+    stopCamera();
+    await startCamera(true);
+    if (!camStream && !camDenied && facing !== prev) {
+      facing = prev;
+      await startCamera(true);
+    }
+  } finally { camFlipping = false; }
 }
 function pauseCamera(){ camRunning = false; }
 function stopCamera(){
   camRunning = false;
+  camGen++; // any getUserMedia still in flight now discards its stream on arrival
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; window._blipVideo = null; }
 }
+/* Exactly one draw loop ever runs. Every start used to spawn a fresh
+   requestAnimationFrame chain without checking whether one was
+   already alive, so loops stacked up (tab returns, call cleanup,
+   flips) and the canvas got drawn over and over per frame. */
+function kickCamTick(){
+  if (camTicking) return;
+  camTicking = true;
+  requestAnimationFrame(camTick);
+}
 function camTick(){
-  if (!camRunning) return;
+  if (!camRunning) { camTicking = false; return; }
   const v = window._blipVideo, canvas = $('cam-canvas');
   if (!v || v.readyState < 2) { requestAnimationFrame(camTick); return; }
   const W = v.videoWidth, H = v.videoHeight;
@@ -2117,6 +2161,7 @@ function camTick(){
   requestAnimationFrame(camTick);
 }
 function capturePhoto(){
+  if (camFlipping) return; // mid-flip the canvas still holds the old camera's last frame
   const canvas = $('cam-canvas');
   if (!canvas.width) { show($('cam-off')); return; }
   // Into the editor first (text, drawing) — uploading happens on Send.
@@ -3087,7 +3132,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0024';
+const BLIP_VERSION = '2026.10.17.1410';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
