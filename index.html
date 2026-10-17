@@ -1261,9 +1261,10 @@ function switchView(v){
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
   ['view-chats','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
   // Leaving the camera tab only pauses the preview render — the stream is
-  // kept alive so coming back never re-asks for camera permission. The
-  // stream is fully released only for calls (stopCamera in startCall /
-  // acceptCall); a flip retargets the live track instead of restarting.
+  // kept alive so coming back never re-asks for camera permission. Calls
+  // borrow the live stream rather than stopping it (see acquireCallStream),
+  // and a flip retargets the live track instead of restarting. The stream
+  // is fully released only on a flip fallback restart.
   if (v === 'view-camera') startCamera(); else pauseCamera();
   if (v === 'view-chats') loadChats();
   if (v === 'view-stories') loadStories();
@@ -1973,6 +1974,22 @@ function wireCamera(){
   $('btn-cam-start').onclick = () => { camDenied = false; camPerm = ''; saveLocal(); startCamera(true); };
   $('btn-flip').onclick = flipCamera;
   wirePhoto();
+  /* The home-screen app gets suspended every time Liam switches away
+     or locks the phone, and iOS may end the camera tracks while it
+     sits suspended. WebKit's rule (same as Safari): while capture is
+     ongoing the grant stays fresh for up to 24 hours, but once
+     capture has been stopped for about a minute the next getUserMedia
+     asks again. So the moment the app comes back to the front, if
+     the tracks died while it was away, re-acquire immediately —
+     capture resumes inside the same return to the app instead of the
+     dead stream being discovered (and re-asked about) on some later
+     start. During a call the call owns the camera — leave it alone. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || callState || activeView !== 'view-camera') return;
+    if (!camStream) { startCamera(); return; }
+    const vt = camStream.getVideoTracks()[0];
+    if (!vt || vt.readyState === 'ended') { camStream = null; window._blipVideo = null; startCamera(); }
+  });
 }
 function setCamPerm(v){
   if (camPerm === v) return;
@@ -1995,7 +2012,14 @@ function setCamPerm(v){
    off state without asking, and only the "Turn On Camera" button —
    the user's own tap — may ask again. */
 async function startCamera(explicit){
-  if (camStream) { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); return; }
+  if (camStream) {
+    const vt = camStream.getVideoTracks()[0];
+    if (vt && vt.readyState === 'live') { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); return; }
+    // iOS ended the tracks while the app was suspended — the stream
+    // object is a corpse. Drop it and fall through to re-acquire, so
+    // the preview never sits frozen on a dead stream.
+    camStream = null; window._blipVideo = null;
+  }
   // Asked and refused (this session, or remembered from an earlier one):
   // never ask again on our own. Just show the off state and the one
   // explicit retry button.
@@ -2043,6 +2067,16 @@ async function openCameraStream(){
     return;
   }
   setCamPerm('granted');
+  // If iOS ends the track mid-session (another app grabs the camera,
+  // a system interruption), revive capture right away while the
+  // camera view is up — WebKit re-asks for permission once capture
+  // has been stopped for about a minute, so a dead stream left
+  // sitting is a guaranteed prompt on the next start.
+  const vt0 = camStream.getVideoTracks()[0];
+  if (vt0) vt0.onended = () => {
+    if (callState || activeView !== 'view-camera' || document.hidden) return;
+    if (camStream && camStream.getVideoTracks()[0] === vt0) { camStream = null; window._blipVideo = null; startCamera(); }
+  };
   const v = document.createElement('video');
   v.srcObject = camStream; v.muted = true; v.playsInline = true;
   try { await v.play(); } catch (e) {}
@@ -2707,19 +2741,57 @@ function makePC(otherId){
   };
   return pc;
 }
+/* Build a call's local stream WITHOUT stopping the camera preview's
+   stream. WebKit re-asks for camera permission once capture has been
+   stopped for about a minute, and a call runs longer than that — so
+   the old flow (stop the preview, run the call, restart the preview)
+   guaranteed a fresh permission prompt after every call. Now a video
+   call borrows the preview's live video track (capture never stops,
+   so the grant never goes stale) and only the microphone is requested
+   new. When no preview stream is running (camera off or denied), the
+   call asks for its own stream exactly as before and owns its tracks.
+   The borrowed track is flagged on the stream so cleanup never stops
+   it — the Mute / Camera call buttons only toggle track.enabled,
+   which is safe on a shared track. */
+async function acquireCallStream(wantVideo){
+  let sharedVideo = null;
+  if (wantVideo && camStream) {
+    const vt = camStream.getVideoTracks()[0];
+    if (vt && vt.readyState === 'live') sharedVideo = vt;
+  }
+  if (!sharedVideo) {
+    const own = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: wantVideo ? { facingMode: 'user' } : false
+    });
+    own._blipSharedVideo = null;
+    return own;
+  }
+  const mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  const stream = new MediaStream([sharedVideo].concat(mic.getTracks()));
+  stream._blipSharedVideo = sharedVideo;
+  return stream;
+}
+/* Stop only the tracks a call owns (its microphone, or its whole
+   fallback stream). The borrowed preview video track is left running:
+   stopping it would end capture and put the next camera start back
+   behind a permission prompt. */
+function releaseCallStream(cs){
+  if (!cs || !cs.localStream) return;
+  const shared = cs.localStream._blipSharedVideo;
+  cs.localStream.getTracks().forEach(t => { if (t !== shared) t.stop(); });
+  cs.localStream = null;
+}
 async function startCall(type, target){
   const other = target || threadOther;
   if (!other || !sb) return;
   if (callState) { toast('Already in a Call'); return; }
-  stopCamera(); // free the camera/mic for the call
+  pauseCamera(); // stop painting the preview — its stream stays alive for the call to borrow
   callState = freshCall({ mode: 'out', type, other, speaker: type === 'video' });
   showCallScreen();
   setCallStatus('Calling…');
   try {
-    callState.localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: type === 'video' ? { facingMode: 'user' } : false
-    });
+    callState.localStream = await acquireCallStream(type === 'video');
   } catch (e) { toast('Camera or Mic Blocked'); endCall(false); return; }
   if (!callState) return;
   attachLocalPreview();
@@ -2747,14 +2819,11 @@ async function acceptCall(){
   if (!cs || cs.mode !== 'in') return;
   stopRing();
   clearTimeout(cs.ringTimeout);
-  stopCamera();
+  pauseCamera(); // preview rendering pauses; its stream stays alive to borrow
   try {
-    cs.localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: cs.type === 'video' ? { facingMode: 'user' } : false
-    });
+    cs.localStream = await acquireCallStream(cs.type === 'video');
   } catch (e) { toast('Camera or Mic Blocked'); declineCall(); return; }
-  if (callState !== cs) { cs.localStream.getTracks().forEach(t => t.stop()); return; }
+  if (callState !== cs) { releaseCallStream(cs); return; }
   attachLocalPreview();
   const pc = makePC(cs.other.id);
   cs.pc = pc;
@@ -2802,7 +2871,7 @@ function cleanupCall(){
     clearTimeout(callState.ringTimeout);
     clearInterval(callState.timerInt);
     if (callState.pc) { try { callState.pc.close(); } catch (e) {} }
-    if (callState.localStream) callState.localStream.getTracks().forEach(t => t.stop());
+    releaseCallStream(callState);
   }
   callState = null;
   const rv = $('call-remote'), lv = $('call-local');
@@ -2811,9 +2880,10 @@ function cleanupCall(){
   const av = $('call-avatar'); if (av) av.style.display = '';
   hide($('screen-call'));
   maybeShowUpdateBanner(); // an update found mid-call is only shown now
-  // The call released the preview stream; if the camera is the visible
-  // view, bring the preview back. Permission was already granted this
-  // session, so this never prompts again.
+  // The call borrowed the preview stream rather than stopping it, so
+  // if the camera is the visible view this just resumes painting it —
+  // no new getUserMedia, and capture never stopped, so there is
+  // nothing for WebKit to re-ask about.
   if (activeView === 'view-camera') startCamera();
 }
 function fmtDur(s){ return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
@@ -3017,7 +3087,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0023';
+const BLIP_VERSION = '2026.10.17.0024';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
