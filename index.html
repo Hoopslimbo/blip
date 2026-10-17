@@ -135,15 +135,19 @@ img{display:block}
 .hidden{display:none!important}
 
 /* ---------- stage ---------- */
-/* Pinned to the top-left corner and given an explicit height measured by
-   the script (--app-h = window.innerHeight, refreshed on resize / rotate /
-   pageshow / keyboard close). Anchoring with inset/bottom alone trusts the
-   webview's layout viewport, which an iOS home-screen app can report short
-   of the physical screen — the stage then stops early and a strip of root
-   background shows along the bottom as a pale "white bar". Measuring the
-   height in JS and painting the root the screen's color (see --root-bg)
-   closes that gap from both sides. */
-#stage{position:fixed;top:0;left:0;right:0;width:100%;height:100%;height:100dvh;height:var(--app-h,100dvh);max-width:430px;margin:0 auto;background:var(--bg);overflow:hidden}
+/* Pinned to all four edges of the viewport the browser is actually
+   presenting (position:fixed + inset:0), with NO explicit height. Earlier
+   versions forced a height measured in JS (--app-h, floored at the
+   physical screen height in standalone mode): when that forced height ran
+   taller than the webview's real viewport, the page was laid out for the
+   full height but only the top part was ever presented — the bottom tab
+   bar fell in the unpainted strip and rendered sliced off at a hard
+   horizontal line, over a same-colored root background that hid the gap.
+   Anchoring to the viewport itself makes the stage exactly as tall as
+   what is on screen, so the tab bar always sits at the true bottom edge,
+   fully painted. Painting the root the screen's color (see --root-bg)
+   still covers any letterbox area on wide screens. */
+#stage{position:fixed;inset:0;width:100%;max-width:430px;margin:0 auto;background:var(--bg);overflow:hidden}
 @media(min-width:480px){
   #stage{inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
 }
@@ -3073,46 +3077,13 @@ function syncUpdateRow(){
   else val.textContent = '';
 }
 
-/* ---------- viewport fit + root color (the "white bar" fix) ---------- */
-/* --app-h: the stage's height. window.innerHeight alone can come back
-   short of the physical screen in an iOS home-screen app (at cold launch,
-   or left shrunk after the keyboard), which floats the tab bar up the
-   screen with a white strip under it — so every measurement the browser
-   offers is considered and the largest wins. In an installed (standalone)
-   app in portrait the app always fills the physical screen, so the
-   screen height is the height, unconditionally: an earlier version of
-   this floor only applied when the reported height was already above
-   55% of the screen, and a badly shrunk cold-launch report (~54%) fell
-   under that bar — the floor never engaged and the "tall white bar"
-   under the tab bar survived every fix aimed at the bar itself.
-   Re-measured whenever the viewport settles; a shrink reported while a
-   text field is focused is the keyboard opening and is ignored, then
-   re-measured after blur. */
-function fitStage(){
-  const ae = document.activeElement;
-  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
-  let h = window.innerHeight || 0;
-  const de = document.documentElement;
-  if (de && de.clientHeight) h = Math.max(h, de.clientHeight);
-  if (window.visualViewport) h = Math.max(h, Math.round(window.visualViewport.height + window.visualViewport.offsetTop));
-  const standalone = window.navigator.standalone === true ||
-    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  if (standalone && window.screen && window.screen.height >= window.screen.width) {
-    h = Math.max(h, window.screen.height);
-  }
-  if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
-}
-function fitStageSoon(){ fitStage(); setTimeout(fitStage, 150); setTimeout(fitStage, 500); setTimeout(fitStage, 1200); }
-window.addEventListener('resize', fitStage);
-window.addEventListener('load', fitStageSoon);
-window.addEventListener('orientationchange', fitStageSoon);
-window.addEventListener('pageshow', fitStageSoon);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) fitStageSoon(); });
-if (window.visualViewport) window.visualViewport.addEventListener('resize', fitStage);
-document.addEventListener('focusout', () => setTimeout(fitStage, 350));
-fitStageSoon();
-
-/* --root-bg: whatever the stage doesn't cover paints this color, so keep
+/* ---------- root color ---------- */
+/* The stage is anchored to the viewport with position:fixed + inset:0
+   (see the #stage rule) and is never given a JS-measured height: forcing
+   one (the old --app-h, floored at screen.height) could stretch the page
+   past the webview's presented viewport, and the tab bar in the
+   unpainted overflow rendered sliced off at a hard line.
+   --root-bg: whatever the stage doesn't cover paints this color, so keep
    it matched to the visible screen (blue splash/auth, dark viewers, white
    app) and no leftover strip can show as a contrasting bar. */
 function syncRootBg(){
