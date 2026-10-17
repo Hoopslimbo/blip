@@ -451,6 +451,60 @@ img{display:block}
 .send-btn:disabled{opacity:.35}
 .cam-mini-btn{width:42px;height:42px;border-radius:50%;background:var(--soft);color:var(--ink);display:flex;align-items:center;justify-content:center;flex:none}
 .cam-mini-btn svg{width:22px;height:22px}
+.mic-btn.recording{background:var(--danger);color:#fff;animation:recPulse 1s ease-in-out infinite}
+.sticker-btn{width:34px;height:34px;border-radius:50%;color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:none;transition:transform .1s,background .15s,color .15s}
+.sticker-btn:active{transform:scale(.9)}
+.sticker-btn.on{background:var(--soft);color:var(--ink)}
+.sticker-btn svg{width:21px;height:21px}
+
+/* ---------- voice messages ---------- */
+#voice-rec-bar{flex:none;display:flex;align-items:center;gap:9px;padding:10px 16px;border-top:1px solid var(--line);background:var(--bg);color:var(--ink);font-weight:700;font-size:14.5px}
+#voice-rec-bar .rec-dot{width:10px;height:10px;border-radius:50%;background:var(--danger);animation:recPulse 1s ease-in-out infinite;flex:none}
+#voice-rec-bar .vr-time{font-variant-numeric:tabular-nums}
+#voice-rec-bar .vr-hint{color:var(--ink2);font-weight:600;font-size:13px}
+.v-bubble{display:flex;align-items:center;gap:10px;padding:9px 13px 9px 9px;border-radius:20px;min-width:186px;max-width:100%}
+.bubble-row.me .v-bubble{background:var(--chat);color:#fff;border-bottom-right-radius:5px}
+.bubble-row.them .v-bubble{background:var(--soft);color:var(--ink);border-bottom-left-radius:5px}
+.v-play{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;transition:transform .1s}
+.v-play:active{transform:scale(.9)}
+.v-play svg{width:17px;height:17px}
+.bubble-row.me .v-play{background:rgba(255,255,255,.28);color:#fff}
+.bubble-row.them .v-play{background:var(--chat);color:#fff}
+.v-track{flex:1;height:5px;border-radius:99px;cursor:pointer;position:relative}
+.bubble-row.me .v-track{background:rgba(255,255,255,.35)}
+.bubble-row.them .v-track{background:var(--line)}
+.v-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:99px}
+.bubble-row.me .v-fill{background:#fff}
+.bubble-row.them .v-fill{background:var(--chat)}
+.v-time{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;flex:none;min-width:30px;text-align:right}
+.bubble-row.me .v-time{color:rgba(255,255,255,.9)}
+.bubble-row.them .v-time{color:var(--ink2)}
+
+/* ---------- sticker picker ---------- */
+#sticker-panel{flex:none;border-top:1px solid var(--line);background:var(--bg);padding:10px 14px 12px;max-height:264px;display:flex;flex-direction:column}
+.sticker-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px 9px}
+.sticker-head b{font-size:14.5px;font-weight:800}
+.sticker-head .done-btn{color:var(--chat);font-weight:800;font-size:14px;padding:4px 6px}
+.sticker-scroll{overflow-y:auto;min-height:0}
+.sticker-scroll::-webkit-scrollbar{display:none}
+.sticker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.sticker-tile{position:relative;border-radius:14px;overflow:hidden;background:var(--soft);aspect-ratio:1;cursor:pointer;padding:0}
+.sticker-tile img{width:100%;height:100%;object-fit:cover}
+.sticker-tile:active{transform:scale(.95)}
+.sticker-create{border:2px dashed var(--line);background:none;color:var(--ink2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800}
+.sticker-create svg{width:22px;height:22px}
+.sticker-del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--danger);color:#fff;display:none;align-items:center;justify-content:center;z-index:2}
+.sticker-del svg{width:12px;height:12px}
+.sticker-grid.editing .sticker-del{display:flex}
+.sticker-empty{color:var(--ink2);font-size:13.5px;padding:4px 2px 8px;line-height:1.45}
+
+/* ---------- per-chat theme ---------- */
+.chat-custom-row{display:flex;align-items:center;gap:12px;margin-top:12px;background:var(--soft);border-radius:16px;padding:10px 12px}
+.chat-custom-row .lab{flex:1;font-size:14.5px;font-weight:700}
+.chat-custom-row input[type="color"]{width:44px;height:44px;border-radius:50%;overflow:hidden;padding:0;cursor:pointer;background:none;flex:none}
+.chat-custom-row input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+.chat-custom-row input[type="color"]::-webkit-color-swatch{border:2px solid var(--line);border-radius:50%}
+.chat-custom-row input[type="color"]::-moz-color-swatch{border:2px solid var(--line);border-radius:50%}
 
 /* ---------- overlays / sheets ---------- */
 .overlay{position:absolute;inset:0;z-index:40;background:rgba(10,10,14,.45);display:flex;align-items:flex-end;animation:fadeIn .2s}
@@ -768,13 +822,21 @@ body.no-camera .side-item[data-side="view-camera"]{display:none!important}
       <button class="head-btn" id="btn-thread-call" aria-label="Call"></button>
     </header>
     <div id="thread-messages"></div>
+    <div id="voice-rec-bar" class="hidden"><span class="rec-dot"></span><span class="vr-time" id="voice-rec-time">0:00</span><span class="vr-hint">Recording — release to send</span></div>
+    <div id="sticker-panel" class="hidden">
+      <div class="sticker-head"><b>Your Stickers</b><button type="button" class="done-btn hidden" id="btn-sticker-done">Done</button></div>
+      <div class="sticker-scroll"><div class="sticker-grid" id="sticker-grid"></div></div>
+    </div>
     <form id="thread-form" class="thread-input">
       <button type="button" class="cam-mini-btn" id="btn-thread-cam" aria-label="Open camera"></button>
+      <button type="button" class="cam-mini-btn mic-btn" id="btn-thread-mic" aria-label="Hold to record a voice message"></button>
       <div class="pill">
         <input id="thread-text" type="text" placeholder="Send a chat" autocomplete="off" maxlength="500">
+        <button type="button" class="sticker-btn" id="btn-thread-sticker" aria-label="Stickers"></button>
         <button type="submit" class="send-btn" id="btn-thread-send" aria-label="Send"></button>
       </div>
     </form>
+    <input id="file-sticker" type="file" accept="image/*" hidden>
     <div id="react-picker" class="hidden" role="menu" aria-label="Choose a reaction"></div>
   </div>
 
@@ -905,6 +967,40 @@ body.no-camera .side-item[data-side="view-camera"]{display:none!important}
     </div>
   </div>
 
+  <!-- ============ THREAD SETTINGS MENU ============ -->
+  <div id="sheet-thread-menu" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3 id="thread-menu-name">Chat</h3>
+      <div class="stack" style="margin-top:2px">
+        <button class="btn-block btn-soft" id="btn-menu-profile">View Profile</button>
+        <button class="btn-block btn-soft" id="btn-menu-theme">Chat Theme</button>
+        <button class="btn-block btn-ghost" id="btn-menu-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CHAT THEME ============ -->
+  <div id="sheet-chat-theme" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Chat Theme</h3>
+      <p id="chat-theme-sub" style="text-align:center;color:var(--ink2);font-size:13.5px;margin:-6px 0 2px"></p>
+      <div class="scroll">
+        <div class="theme-grid" id="chat-theme-grid"></div>
+        <div class="chat-custom-row">
+          <span class="lab">Custom Color</span>
+          <input type="color" id="chat-theme-color" value="#7ec8ff" aria-label="Pick a custom chat color">
+          <button class="btn-mini" id="btn-chat-theme-custom" type="button">Use</button>
+        </div>
+        <p class="set-note" style="margin-top:12px">This theme only shows in this one chat — your other chats keep your app theme.</p>
+      </div>
+      <div class="stack">
+        <button class="btn-block btn-ink" id="btn-chat-theme-done">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ FRIENDS ============ -->
   <div id="screen-friends" class="screen over hidden">
     <header class="app-head">
@@ -945,6 +1041,7 @@ body.no-camera .side-item[data-side="view-camera"]{display:none!important}
             <button class="btn-block btn-soft" id="btn-user-call"><span data-ico="phone"></span>Call</button>
             <button class="btn-block btn-soft" id="btn-user-video"><span data-ico="video"></span>Video</button>
           </div>
+          <button class="btn-block btn-soft" id="btn-user-theme">Chat Theme</button>
           <button class="btn-block btn-yellow2" id="btn-user-friend">Add Friend</button>
         </div>
         <button class="btn-block btn-yellow2 hidden" id="btn-user-edit">Edit Profile</button>
@@ -1106,7 +1203,11 @@ const IC = {
   vidOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.2A2.4 2.4 0 0 1 5.4 7h7.2a2.4 2.4 0 0 1 2.4 2.4v5.2M15 11l6-3.4v8.8l-2.4-1.4M5.6 17h6.8M4 4l16 16"/></svg>',
   phoneEnd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(135 12 12)"><path d="M5 4h3.4l1.6 4.4-2.3 1.8a12.6 12.6 0 0 0 6 6L15.6 14 20 15.6V19a1.8 1.8 0 0 1-2 1.8C10.4 20.2 3.8 13.6 3.2 6A1.8 1.8 0 0 1 5 4Z"/></g></svg>',
   gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.64 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01A1.7 1.7 0 0 0 10 2.91V3a2 2 0 1 1 4 0v.09c0 .68.4 1.3 1 1.55.61.26 1.32.1 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01c.26.6.87 1 1.55 1H21a2 2 0 1 1 0 4h-.09c-.68 0-1.29.4-1.51 1Z"/></svg>',
-  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 10 18 19.5 6.5"/></svg>'
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 10 18 19.5 6.5"/></svg>',
+  sticker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><circle cx="9.2" cy="10" r=".4" fill="currentColor"/><circle cx="14.8" cy="10" r=".4" fill="currentColor"/><path d="M8.2 14.2a5.4 5.4 0 0 0 7.6 0"/></svg>',
+  playTri:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 5.4v13.2c0 .9 1 1.5 1.8 1L19 13a1.2 1.2 0 0 0 0-2L10.3 4.4c-.8-.5-1.8.1-1.8 1Z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.4" y="5" width="3.8" height="14" rx="1.4"/><rect x="13.8" y="5" width="3.8" height="14" rx="1.4"/></svg>',
+  palette:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6a8.4 8.4 0 1 0 0 16.8c1.2 0 1.7-.8 1.7-1.6 0-.9-.7-1.4-.7-2.3 0-.8.7-1.4 1.6-1.4h1.7a4.2 4.2 0 0 0 4.1-4.5C20.2 6.7 16.5 3.6 12 3.6Z"/><circle cx="7.6" cy="10.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="6.9" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.1" fill="currentColor" stroke="none"/></svg>'
 };
 function setIco(el, name){ if (el) el.innerHTML = IC[name] || ''; }
 document.querySelectorAll('[data-ico]').forEach(el => setIco(el, el.dataset.ico));
@@ -1116,6 +1217,7 @@ setIco($('btn-friends-back'), 'chevL'); setIco($('btn-user-back'), 'chevL');
 setIco($('btn-open-settings'), 'gear'); setIco($('btn-settings-back'), 'chevL');
 setIco($('btn-thread-call'), 'phone'); setIco($('btn-thread-video'), 'video');
 setIco($('btn-thread-send'), 'send'); setIco($('btn-thread-cam'), 'camera');
+setIco($('btn-thread-mic'), 'mic'); setIco($('btn-thread-sticker'), 'sticker');
 setIco($('btn-flip'), 'flip');
 setIco($('btn-cam-search'), 'search'); setIco($('btn-add-cam'), 'addUser');
 setIco($('btn-story-close'), 'x'); setIco($('btn-photo-close'), 'x'); setIco($('btn-story-del'), 'trash');
@@ -1128,6 +1230,7 @@ let activeView = 'view-chats';
 let threadOther = null;
 let profilesCache = {};
 let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
+let chatThemes = {};         // otherId -> theme id, or 'custom:#rrggbb' (per-chat themes)
 let nameChanged = false;     // one-time display-name change used?
 let camStream = null, facing = 'user';
 /* Set the moment camera access is refused: from then on the app never
@@ -1162,7 +1265,15 @@ let photoReturn = null;       // where to go after closing a photo message
    storage server; it just lets every viewer tell video from photo. */
 const VIDEO_MARK = '#blip-video';
 function isVideoUrl(u){ return typeof u === 'string' && u.slice(-VIDEO_MARK.length) === VIDEO_MARK; }
-function cleanMediaUrl(u){ return isVideoUrl(u) ? u.slice(0, -VIDEO_MARK.length) : u; }
+/* Voice messages ride in image_url too, with their own marker — the
+   audio file itself lives in the blip-media bucket like every photo. */
+const VOICE_MARK = '#blip-voice';
+function isVoiceUrl(u){ return typeof u === 'string' && u.slice(-VOICE_MARK.length) === VOICE_MARK; }
+function cleanMediaUrl(u){
+  if (isVideoUrl(u)) return u.slice(0, -VIDEO_MARK.length);
+  if (isVoiceUrl(u)) return u.slice(0, -VOICE_MARK.length);
+  return u;
+}
 
 /* ---------- helpers ---------- */
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1203,11 +1314,11 @@ function toast(msg){
 function loadLocal(){
   try {
     const raw = localStorage.getItem('blip_local_' + (me ? me.id : 'anon'));
-    if (raw) { const o = JSON.parse(raw); openedMap = o.opened || {}; nameChanged = !!o.nameChanged; camPerm = o.camPerm || ''; }
+    if (raw) { const o = JSON.parse(raw); openedMap = o.opened || {}; nameChanged = !!o.nameChanged; camPerm = o.camPerm || ''; chatThemes = o.chatThemes || {}; }
   } catch (e) {}
 }
 function saveLocal(){
-  try { localStorage.setItem('blip_local_' + me.id, JSON.stringify({ opened: openedMap, nameChanged, camPerm })); } catch (e) {}
+  try { localStorage.setItem('blip_local_' + me.id, JSON.stringify({ opened: openedMap, nameChanged, camPerm, chatThemes })); } catch (e) {}
 }
 function markOpened(otherId){
   openedMap[otherId] = new Date().toISOString(); saveLocal();
@@ -1217,6 +1328,7 @@ function markOpened(otherId){
 async function init(){
   detectCameraPresence(); // find out if this device has a camera at all — never prompts
   wireAuth(); wireNav(); wireProfile(); wireSettings(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor(); wireCropper();
+  wireVoice(); wireStickers(); wireChatTheme();
   // The service worker asks us to re-subscribe when the push service rotates
   // our subscription ('pushsubscriptionchange').
   if ('serviceWorker' in navigator) {
@@ -1550,7 +1662,7 @@ async function openCropper(file, kind){
   img.src = url;
   try { await img.decode(); } catch (e) { URL.revokeObjectURL(url); toast('Could not open that photo'); return; }
   cropState = { kind, url, iw: img.naturalWidth, ih: img.naturalHeight, frame: null, minScale: 1, scale: 1, x: 0, y: 0, pointers: new Map(), pinch: null };
-  $('crop-title').textContent = kind === 'banner' ? 'Position Banner' : 'Position Photo';
+  $('crop-title').textContent = kind === 'banner' ? 'Position Banner' : (kind === 'sticker' ? 'Make Sticker' : 'Position Photo');
   $('crop-frame').classList.toggle('round', kind === 'avatar');
   const el = $('crop-img');
   el.src = url;
@@ -1564,7 +1676,7 @@ function layoutCropFrame(){
   const W = stage.clientWidth, H = stage.clientHeight;
   if (!W || !H) return;
   let fw, fh;
-  if (cs.kind === 'avatar') { const s = Math.min(W * 0.8, H * 0.72); fw = s; fh = s; }
+  if (cs.kind === 'avatar' || cs.kind === 'sticker') { const s = Math.min(W * 0.8, H * 0.72); fw = s; fh = s; }
   else { fw = Math.min(W * 0.94, 560); fh = fw * (168 / 390); if (fh > H * 0.6) { fh = H * 0.6; fw = fh * (390 / 168); } }
   cs.frame = { x: (W - fw) / 2, y: (H - fh) / 2, w: fw, h: fh };
   const fr = $('crop-frame');
@@ -1675,9 +1787,16 @@ async function saveCrop(){
   c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
   const kind = cs.kind;
   closeCropper();
-  toast(kind === 'banner' ? 'Uploading Banner…' : 'Uploading Photo…');
+  toast(kind === 'banner' ? 'Uploading Banner…' : (kind === 'sticker' ? 'Saving Sticker…' : 'Uploading Photo…'));
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
   if (!blob) { toast('Could not save that photo'); return; }
+  if (kind === 'sticker') {
+    if (await saveStickerImage(blob)) {
+      toast('Sticker Saved');
+      if (threadOther && !$('screen-thread').classList.contains('hidden')) openStickerPanel();
+    }
+    return;
+  }
   if (await saveProfileImage(blob, kind)) {
     if (kind === 'banner') { openProfile(); refreshEditSheet(); toast('Banner Updated'); }
     else { openProfile(); refreshMyAvatars(); refreshEditSheet(); toast('Profile Photo Updated'); }
@@ -1921,6 +2040,12 @@ async function fetchProfiles(ids){
 function statusFor(m, otherId){
   const opened = openedMap[otherId];
   const isUnread = m.receiver_id === me.id && (!opened || new Date(m.created_at) > new Date(opened));
+  if (isVoiceUrl(m.image_url)) {
+    if (m.sender_id === me.id) return { cls: 'st-chat', dot: 'var(--chat)', label: 'Delivered', unread: false };
+    return isUnread
+      ? { cls: 'st-chat', dot: 'var(--chat)', label: 'New Voice Message', unread: true }
+      : { cls: 'st-plain', dot: '#c6ccd4', label: 'Voice Message', unread: false };
+  }
   if (m.image_url) {
     if (m.sender_id === me.id) return { cls: 'st-photo', dot: 'var(--photo)', label: 'Delivered', unread: false };
     return isUnread
@@ -1939,7 +2064,7 @@ async function loadChats(){
   $('chats-empty').classList.toggle('hidden', threads.length > 0);
   threads.forEach(t => {
     const m = t.last, st = statusFor(m, t.other.id);
-    const snippet = m.image_url ? '' : ' · ' + esc((m.body || '').slice(0, 42));
+    const snippet = m.image_url ? (isVoiceUrl(m.image_url) ? ' · Voice Message' : '') : ' · ' + esc((m.body || '').slice(0, 42));
     const r = document.createElement('div');
     r.className = 'chat-row';
     r.innerHTML = '<span class="chat-av">' + avatarHTML(t.other, 'md') + '</span>' +
@@ -1955,7 +2080,11 @@ async function loadChats(){
 /* ---------- thread ---------- */
 function wireChat(){
   $('btn-thread-back').onclick = closeThread;
-  $('thread-who').onclick = () => { if (threadOther) openUserProfile(threadOther); };
+  $('thread-who').onclick = () => { if (threadOther) openThreadMenu(); };
+  $('btn-menu-profile').onclick = () => { hide($('sheet-thread-menu')); if (threadOther) openUserProfile(threadOther); };
+  $('btn-menu-theme').onclick = () => { hide($('sheet-thread-menu')); if (threadOther) openChatTheme(threadOther); };
+  $('btn-menu-cancel').onclick = () => hide($('sheet-thread-menu'));
+  $('sheet-thread-menu').addEventListener('click', (e) => { if (e.target === $('sheet-thread-menu')) hide($('sheet-thread-menu')); });
   $('btn-thread-call').onclick = () => startCall('audio');
   $('btn-thread-video').onclick = () => startCall('video');
   $('btn-thread-cam').onclick = () => { closeThread(); switchView('view-camera'); };
@@ -1972,14 +2101,23 @@ function wireChat(){
     await sendMessage(threadOther.id, t, null);
   };
 }
+function openThreadMenu(){
+  if (!threadOther) return;
+  $('thread-menu-name').textContent = threadOther.display_name || 'Chat';
+  show($('sheet-thread-menu'));
+}
 function closeThread(){
   closeReactPicker();
+  cancelVoiceRecording();
+  closeStickerPanel();
+  clearChatThemeVars();
   threadOther = null;
   hide($('screen-thread')); show($('screen-main'));
   loadChats();
 }
 async function openThread(other){
   threadOther = other;
+  applyChatTheme(other.id);
   markOpened(other.id);
   clearChatNotifications(other.id);
   $('thread-name').textContent = other.display_name;
@@ -2015,7 +2153,9 @@ function bubble(m, gap){
   const row = document.createElement('div');
   row.className = 'bubble-row ' + (mine ? 'me' : 'them') + (gap ? ' gap' : '');
   row.dataset.mid = m.id;
-  if (m.image_url) {
+  if (isVoiceUrl(m.image_url)) {
+    row.appendChild(voiceBubble(m, mine));
+  } else if (m.image_url) {
     // The photo itself, at its own proportions — not an icon box.
     // Tapping it still opens the fullscreen viewer.
     const vid = isVideoUrl(m.image_url);
@@ -2069,6 +2209,392 @@ async function sendMessage(receiverId, body, imageUrl){
   const tmpEl = document.querySelector('[data-mid="' + temp.id + '"]');
   if (tmpEl) tmpEl.dataset.mid = data.id;
 }
+
+/* ---------- voice messages ----------
+   Hold the mic button in the chat bar to record; releasing sends.
+   The clip uploads to the blip-media bucket and rides in image_url
+   with the #blip-voice marker, the same trick videos use with
+   #blip-video. In the thread it renders as a play/pause bubble with
+   a progress track; only one voice message plays at a time. */
+let activeVoiceAudio = null;
+function voiceBubble(m, mine){
+  const wrap = document.createElement('div');
+  wrap.className = 'v-bubble';
+  const audio = document.createElement('audio');
+  audio.preload = 'metadata';
+  audio.src = cleanMediaUrl(m.image_url);
+  const playBtn = document.createElement('button');
+  playBtn.className = 'v-play';
+  playBtn.type = 'button';
+  playBtn.setAttribute('aria-label', 'Play voice message');
+  playBtn.innerHTML = IC.playTri;
+  const track = document.createElement('div');
+  track.className = 'v-track';
+  const fill = document.createElement('div');
+  fill.className = 'v-fill';
+  track.appendChild(fill);
+  const time = document.createElement('span');
+  time.className = 'v-time';
+  time.textContent = '0:00';
+  const paint = () => {
+    const d = audio.duration, c = audio.currentTime || 0;
+    fill.style.width = (isFinite(d) && d > 0) ? Math.min(100, (c / d) * 100) + '%' : '0%';
+    const playing = !audio.paused && !audio.ended;
+    time.textContent = fmtDur(Math.floor((playing || c > 0.05) ? c : (isFinite(d) ? d : 0)));
+    playBtn.innerHTML = audio.paused ? IC.playTri : IC.pause;
+  };
+  audio.addEventListener('loadedmetadata', paint);
+  audio.addEventListener('timeupdate', paint);
+  audio.addEventListener('play', paint);
+  audio.addEventListener('pause', paint);
+  audio.addEventListener('ended', () => { try { audio.currentTime = 0; } catch (e) {} paint(); });
+  playBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  playBtn.addEventListener('pointerup', (e) => e.stopPropagation());
+  playBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (audio.paused) {
+      if (activeVoiceAudio && activeVoiceAudio !== audio) { try { activeVoiceAudio.pause(); } catch (err) {} }
+      activeVoiceAudio = audio;
+      audio.play().catch(() => toast('Could not play that voice message'));
+    } else audio.pause();
+  };
+  track.onclick = (e) => {
+    const d = audio.duration;
+    if (!isFinite(d) || !d) return;
+    const r = track.getBoundingClientRect();
+    if (!r.width) return;
+    try { audio.currentTime = Math.min(d - 0.05, Math.max(0, ((e.clientX - r.left) / r.width) * d)); } catch (err) {}
+    paint();
+  };
+  wrap.appendChild(playBtn);
+  wrap.appendChild(track);
+  wrap.appendChild(time);
+  wrap.appendChild(audio);
+  wireMessageGestures(wrap, m, null);
+  return wrap;
+}
+let voiceRec = null;   // { mr, chunks, mime, stream, startedAt, timer, discard, stopWanted }
+function pickAudioMime(){
+  if (typeof MediaRecorder === 'undefined') return '';
+  const cands = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', ''];
+  for (const c of cands) { if (!c || MediaRecorder.isTypeSupported(c)) return c; }
+  return '';
+}
+function wireVoice(){
+  const btn = $('btn-thread-mic');
+  if (!btn) return;
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (voiceRec) return;
+    try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+    startVoiceRecording();
+  });
+  btn.addEventListener('pointerup', () => stopVoiceRecording());
+  btn.addEventListener('pointercancel', () => cancelVoiceRecording());
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+async function startVoiceRecording(){
+  if (voiceRec || !threadOther) return;
+  if (typeof MediaRecorder === 'undefined') { toast('Voice messages are not supported on this device'); return; }
+  const rec = { mr: null, chunks: [], mime: '', stream: null, startedAt: 0, timer: null, discard: false, stopWanted: false };
+  voiceRec = rec;
+  $('btn-thread-mic').classList.add('recording');
+  show($('voice-rec-bar'));
+  $('voice-rec-time').textContent = '0:00';
+  let stream = null;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { stream = null; }
+  if (voiceRec !== rec) { if (stream) stream.getTracks().forEach(t => t.stop()); return; }
+  if (!stream) { voiceRec = null; endVoiceRecUI(rec); toast('Microphone blocked — allow mic access to send voice messages'); return; }
+  rec.stream = stream;
+  let mr = null;
+  try {
+    const mime = pickAudioMime();
+    mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+  } catch (e) { mr = null; }
+  if (!mr) { voiceRec = null; endVoiceRecUI(rec); toast('Voice messages are not supported on this device'); return; }
+  rec.mr = mr;
+  rec.mime = mr.mimeType || 'audio/mp4';
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+  mr.onstop = () => finishVoiceRecording(rec);
+  try { mr.start(200); } catch (e) { voiceRec = null; endVoiceRecUI(rec); toast('Voice messages are not supported on this device'); return; }
+  rec.startedAt = Date.now();
+  rec.timer = setInterval(() => { $('voice-rec-time').textContent = fmtDur(Math.floor((Date.now() - rec.startedAt) / 1000)); }, 200);
+  if (rec.stopWanted) stopVoiceRecording();
+  if (rec.discard) cancelVoiceRecording();
+}
+function endVoiceRecUI(rec){
+  clearInterval(rec.timer);
+  $('btn-thread-mic').classList.remove('recording');
+  hide($('voice-rec-bar'));
+  if (rec.stream) { rec.stream.getTracks().forEach(t => t.stop()); rec.stream = null; }
+}
+function stopVoiceRecording(){
+  const rec = voiceRec; if (!rec) return;
+  if (!rec.mr) { rec.stopWanted = true; return; }
+  if (rec.mr.state === 'inactive') { finishVoiceRecording(rec); return; }
+  try { rec.mr.stop(); } catch (e) { finishVoiceRecording(rec); }
+}
+function cancelVoiceRecording(){
+  const rec = voiceRec; if (!rec) return;
+  rec.discard = true;
+  if (!rec.mr) { voiceRec = null; endVoiceRecUI(rec); return; }
+  if (rec.mr.state === 'inactive') { finishVoiceRecording(rec); return; }
+  try { rec.mr.stop(); } catch (e) { finishVoiceRecording(rec); }
+}
+async function finishVoiceRecording(rec){
+  if (voiceRec !== rec) return;
+  voiceRec = null;
+  const dur = rec.startedAt ? (Date.now() - rec.startedAt) / 1000 : 0;
+  const type = (rec.mime || 'audio/mp4').split(';')[0];
+  const chunks = rec.chunks;
+  endVoiceRecUI(rec);
+  if (rec.discard) return;
+  const blob = new Blob(chunks, { type });
+  if (!chunks.length || dur < 0.7 || !blob.size) { toast('Hold the mic to record a voice message'); return; }
+  if (!threadOther) return;
+  const url = await uploadVoice(blob);
+  if (url) await sendMessage(threadOther.id, null, url + VOICE_MARK);
+}
+async function uploadVoice(blob){
+  const type = (blob.type || 'audio/mp4').split(';')[0];
+  const ext = type.indexOf('webm') !== -1 ? 'webm' : (type.indexOf('ogg') !== -1 ? 'ogg' : 'm4a');
+  const path = me.id + '/voice-' + Date.now() + '.' + ext;
+  const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: type });
+  if (error) { toast('Upload failed: ' + error.message); return null; }
+  return sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- per-chat themes ----------
+   A chat can carry its own palette that overrides the app theme
+   inside that one conversation. The pick is stored per friend in
+   chatThemes (the same device-local store as the read markers — the
+   app theme itself is likewise saved on this device). Applying a
+   chat theme means setting the theme's CSS variables on the thread
+   screen only: every surface inside the thread reads those variables,
+   and nothing outside the thread is touched. Closing the thread
+   clears them again. */
+const CHAT_THEME_VARS = {
+  light:  { '--bg': '#ffffff', '--sheet': '#ffffff', '--soft': '#f4f4f7', '--ink': '#0f1014', '--ink2': '#656d78', '--ink3': '#68727f', '--line': '#ececf0', '--chat': '#0fadff', '--photo': '#1e90ff', '--yellow': '#1e90ff' },
+  dark:   { '--bg': '#101218', '--sheet': '#161922', '--soft': '#1e222d', '--ink': '#f4f6fa', '--ink2': '#a9b2c1', '--ink3': '#828da0', '--line': '#262b38', '--chat': '#0fadff', '--photo': '#1e90ff', '--yellow': '#1e90ff' },
+  sunset: { '--bg': '#fffaf5', '--sheet': '#fffaf5', '--soft': '#fdeedf', '--ink': '#2a1710', '--ink2': '#7d5a4c', '--ink3': '#a37f6d', '--line': '#f4ddcd', '--chat': '#ff8a3d', '--photo': '#ff6a3d', '--yellow': '#ff6a3d' },
+  grape:  { '--bg': '#171221', '--sheet': '#1e1729', '--soft': '#291e3d', '--ink': '#f3eefc', '--ink2': '#b7a9d6', '--ink3': '#9180b3', '--line': '#342a4a', '--chat': '#c084fc', '--photo': '#9b5de5', '--yellow': '#9b5de5' },
+  mint:   { '--bg': '#f7fdf9', '--sheet': '#f7fdf9', '--soft': '#e3f5ea', '--ink': '#0e211a', '--ink2': '#4f6f61', '--ink3': '#7d9a8c', '--line': '#d2ecdd', '--chat': '#00b8a9', '--photo': '#00a878', '--yellow': '#00a878' }
+};
+const CHAT_VAR_KEYS = ['--bg', '--sheet', '--soft', '--ink', '--ink2', '--ink3', '--line', '--chat', '--photo', '--yellow'];
+function hexRgb(hex){
+  const h = String(hex || '').replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return null;
+  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+}
+function mixHex(hex, target, amt){
+  const a = hexRgb(hex), b = hexRgb(target);
+  if (!a || !b) return hex;
+  const m = (x, y) => Math.round(x + (y - x) * amt);
+  return 'rgb(' + m(a.r, b.r) + ',' + m(a.g, b.g) + ',' + m(a.b, b.b) + ')';
+}
+/* A custom color becomes the chat's wallpaper: text and surfaces are
+   derived from its brightness so the thread stays readable, and the
+   bubble accent keeps the app color. */
+function customChatVars(hex){
+  const c = hexRgb(hex); if (!c) return {};
+  const lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
+  const light = lum > 0.55;
+  const ink = light ? '#17181c' : '#f7f8fa';
+  return {
+    '--bg': hex, '--sheet': hex,
+    '--soft': mixHex(hex, light ? '#000000' : '#ffffff', light ? 0.06 : 0.12),
+    '--ink': ink,
+    '--ink2': mixHex(ink, hex, 0.35),
+    '--ink3': mixHex(ink, hex, 0.5),
+    '--line': mixHex(hex, light ? '#000000' : '#ffffff', light ? 0.12 : 0.2)
+  };
+}
+function chatPrefVars(pref){
+  if (!pref) return null;
+  if (pref.indexOf('custom:') === 0) return customChatVars(pref.slice(7));
+  return CHAT_THEME_VARS[pref] || null;
+}
+function clearChatThemeVars(){
+  const scr = $('screen-thread'); if (!scr) return;
+  CHAT_VAR_KEYS.forEach(k => scr.style.removeProperty(k));
+}
+function applyChatTheme(otherId){
+  clearChatThemeVars();
+  const vars = chatPrefVars(chatThemes[otherId]);
+  if (!vars) return;
+  const scr = $('screen-thread');
+  Object.keys(vars).forEach(k => scr.style.setProperty(k, vars[k]));
+}
+let chatThemeTarget = null;
+function wireChatTheme(){
+  $('btn-chat-theme-done').onclick = () => hide($('sheet-chat-theme'));
+  $('sheet-chat-theme').addEventListener('click', (e) => { if (e.target === $('sheet-chat-theme')) hide($('sheet-chat-theme')); });
+  $('btn-chat-theme-custom').onclick = () => {
+    if (!chatThemeTarget) return;
+    setChatTheme(chatThemeTarget.id, 'custom:' + $('chat-theme-color').value);
+  };
+  $('btn-user-theme').onclick = () => { if (viewUser) openChatTheme(viewUser); };
+}
+function openChatTheme(other){
+  if (!other) return;
+  chatThemeTarget = other;
+  $('chat-theme-sub').textContent = 'For your chat with ' + (other.display_name || 'this friend');
+  const pref = chatThemes[other.id];
+  if (pref && pref.indexOf('custom:') === 0) $('chat-theme-color').value = pref.slice(7);
+  renderChatThemeGrid();
+  show($('sheet-chat-theme'));
+}
+function setChatTheme(otherId, pref){
+  if (pref) chatThemes[otherId] = pref; else delete chatThemes[otherId];
+  saveLocal();
+  applyChatTheme(otherId);
+  renderChatThemeGrid();
+  toast(pref ? 'Chat Theme Set' : 'Using Your App Theme');
+}
+function renderChatThemeGrid(){
+  const grid = $('chat-theme-grid');
+  if (!grid || !chatThemeTarget) return;
+  const pref = chatThemes[chatThemeTarget.id] || '';
+  grid.innerHTML = '';
+  const mk = (id, name, prev) => {
+    const on = id ? pref === id : !pref;
+    const card = document.createElement('button');
+    card.className = 'theme-card' + (on ? ' on' : '');
+    card.setAttribute('aria-label', name + ' chat theme');
+    card.innerHTML =
+      '<div class="theme-prev" style="background:' + prev.bg + '">' +
+        '<span class="tp-dot" style="background:' + prev.accent + '"></span>' +
+        '<span class="tp-line" style="background:' + prev.ink + ';top:11px;width:46%"></span>' +
+        '<span class="tp-line" style="background:' + prev.ink + ';top:23px;width:30%;opacity:.45"></span>' +
+        '<span class="tp-bar" style="background:' + prev.soft + '"></span>' +
+      '</div>' +
+      '<div class="theme-name">' + esc(name) + (on ? '<span class="check">' + IC.check + '</span>' : '') + '</div>';
+    card.onclick = () => setChatTheme(chatThemeTarget.id, id);
+    grid.appendChild(card);
+  };
+  const cur = THEMES.find(t => t.id === themeId) || THEMES[0];
+  mk('', 'App Theme', cur);
+  THEMES.forEach(t => mk(t.id, t.name, t));
+  if (pref.indexOf('custom:') === 0) {
+    const hex = pref.slice(7);
+    mk(pref, 'Custom', { bg: hex, soft: mixHex(hex, '#ffffff', 0.3), ink: '#17181c', accent: hex });
+  }
+}
+
+/* ---------- custom stickers ----------
+   A sticker is one of the user's own photos, cropped to a square in
+   the positioner (kind 'sticker'). Each sticker is a file under
+   <my id>/stickers/ in the blip-media bucket, so listing that folder
+   IS the sticker library: per-user, saved on the account in storage,
+   and there on every session and device — no extra table. Sending a
+   sticker is an ordinary image message with its URL. Long-press the
+   picker to delete stickers. */
+let myStickers = null;       // [{ name, path, url }] newest first; null = not loaded yet
+let stickerEditMode = false;
+function wireStickers(){
+  $('btn-thread-sticker').onclick = toggleStickerPanel;
+  $('btn-sticker-done').onclick = () => setStickerEditMode(false);
+  $('file-sticker').onchange = (e) => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (f) openCropper(f, 'sticker');
+  };
+}
+function toggleStickerPanel(){
+  if ($('sticker-panel').classList.contains('hidden')) openStickerPanel();
+  else closeStickerPanel();
+}
+async function openStickerPanel(){
+  show($('sticker-panel'));
+  $('btn-thread-sticker').classList.add('on');
+  if (!myStickers) await loadStickers();
+  renderStickerGrid();
+  const box = $('thread-messages');
+  box.scrollTop = box.scrollHeight;
+}
+function closeStickerPanel(){
+  if ($('sticker-panel')) hide($('sticker-panel'));
+  if ($('btn-thread-sticker')) $('btn-thread-sticker').classList.remove('on');
+  setStickerEditMode(false);
+}
+function setStickerEditMode(on){
+  stickerEditMode = !!on;
+  const grid = $('sticker-grid'); if (grid) grid.classList.toggle('editing', stickerEditMode);
+  const done = $('btn-sticker-done'); if (done) done.classList.toggle('hidden', !stickerEditMode);
+}
+async function loadStickers(){
+  if (!sb || !me) { myStickers = []; return; }
+  const { data, error } = await sb.storage.from('blip-media').list(me.id + '/stickers', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+  if (error) { if (!myStickers) myStickers = []; return; }
+  myStickers = (data || [])
+    .filter(f => f && f.name && f.id && f.name.charAt(0) !== '.')
+    .map(f => {
+      const path = me.id + '/stickers/' + f.name;
+      return { name: f.name, path: path, url: sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl };
+    });
+}
+function renderStickerGrid(){
+  const grid = $('sticker-grid'); if (!grid) return;
+  grid.innerHTML = '';
+  const create = document.createElement('button');
+  create.type = 'button';
+  create.className = 'sticker-tile sticker-create';
+  create.innerHTML = IC.plus + '<span>Create</span>';
+  create.setAttribute('aria-label', 'Create a sticker from a photo');
+  create.onclick = () => $('file-sticker').click();
+  grid.appendChild(create);
+  (myStickers || []).forEach(st => {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'sticker-tile';
+    tile.setAttribute('aria-label', 'Send sticker');
+    const img = document.createElement('img');
+    img.src = st.url; img.alt = 'Your sticker';
+    tile.appendChild(img);
+    const del = document.createElement('span');
+    del.className = 'sticker-del';
+    del.innerHTML = IC.x;
+    del.onclick = (e) => { e.stopPropagation(); deleteSticker(st); };
+    tile.appendChild(del);
+    let lpTimer = null, lpFired = false;
+    tile.addEventListener('pointerdown', () => {
+      lpFired = false;
+      clearTimeout(lpTimer);
+      lpTimer = setTimeout(() => { lpFired = true; setStickerEditMode(true); }, 550);
+    });
+    ['pointerup', 'pointercancel', 'pointermove'].forEach(ev => tile.addEventListener(ev, () => clearTimeout(lpTimer)));
+    tile.onclick = () => { if (!lpFired && !stickerEditMode) sendSticker(st); };
+    grid.appendChild(tile);
+  });
+  if (!myStickers || !myStickers.length) {
+    const hint = document.createElement('p');
+    hint.className = 'sticker-empty';
+    hint.style.gridColumn = '1 / -1';
+    hint.textContent = 'No stickers yet — tap Create to turn one of your photos into a sticker. Hold a sticker to delete it.';
+    grid.appendChild(hint);
+  }
+}
+async function sendSticker(st){
+  if (!threadOther || !st) return;
+  closeStickerPanel();
+  await sendMessage(threadOther.id, null, st.url);
+}
+async function deleteSticker(st){
+  const { error } = await sb.storage.from('blip-media').remove([st.path]);
+  if (error) { toast('Could not delete sticker: ' + error.message); return; }
+  myStickers = (myStickers || []).filter(x => x.path !== st.path);
+  if (!myStickers.length) setStickerEditMode(false);
+  renderStickerGrid();
+  toast('Sticker Deleted');
+}
+async function saveStickerImage(blob){
+  const path = me.id + '/stickers/' + Date.now() + '.jpg';
+  const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
+  if (error) { toast('Upload failed: ' + error.message); return false; }
+  myStickers = null; // re-listed next time the picker opens
+  return true;
+}
+
 
 /* ---------- message reactions ----------
    One reaction per person per message, stored in blip_reactions
@@ -3906,7 +4432,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.2145';
+const BLIP_VERSION = '2026.10.17.2245';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
