@@ -2043,23 +2043,22 @@ async function startCamera(explicit){
   camStarting = null;
   if (camStream) hide($('cam-off')); else show($('cam-off'));
 }
-/* Ask the camera for the tall portrait frame the app originally
-   used — the frame shaped like the phone screen, so the preview
-   fills the screen edge to edge and captured photos come out
-   portrait, the way they did before the wide-frame experiment.
-   (A brief detour asked for a 1920x1080 landscape frame instead:
-   the preview cover-cropped it and photos landed wide in the
-   editor. Reverted at the user's request.) The pane's own aspect
-   ratio and matching portrait dimensions are passed as ideals, so
-   a camera that can't match exactly still opens. */
+/* Ask for NOTHING but the facing. Every framing request tried so
+   far made the preview look zoomed in, because no phone camera
+   shoots a frame shaped like the tall phone screen: the wide
+   1920x1080 experiment got cover-cropped by the preview, and the
+   portrait ideals that replaced it (screen-matched aspectRatio,
+   width 1080, height ~1080/ar) asked the sensor for a sliver it
+   cannot natively deliver, so the browser center-cropped its real
+   frame down to the requested shape — a digital zoom by another
+   name, on both the preview and captured photos. With no width,
+   height or aspectRatio constraints at all, the camera hands back
+   its own native frame at its full field of view — the widest,
+   least-cropped picture it has — and the preview canvas (sized
+   from the stream itself, object-fit: cover) fills the screen
+   from that full frame instead of from a pre-cropped sliver. */
 function camVideoConstraints(){
-  const ar = window.innerWidth / Math.max(1, window.innerHeight);
-  return {
-    facingMode: facing,
-    width: { ideal: 1080 },
-    height: { ideal: Math.round(1080 / ar) },
-    aspectRatio: { ideal: ar }
-  };
+  return { facingMode: facing };
 }
 async function openCameraStream(gen){
   let stream = null;
@@ -3132,7 +3131,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.1410';
+const BLIP_VERSION = '2026.10.17.1412';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
