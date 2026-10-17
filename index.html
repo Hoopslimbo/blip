@@ -2003,23 +2003,23 @@ async function startCamera(explicit){
   camStarting = null;
   if (camStream) hide($('cam-off')); else show($('cam-off'));
 }
-/* Ask the camera for a frame shaped like the screen it's shown on.
-   With no size hints the browser hands back its default mode (often a
-   squarish 4:3), and filling a tall phone screen from that crops most
-   of the frame away — the preview reads as zoomed in. Requesting the
-   pane's own aspect ratio (as ideals, so a camera that can't match
-   still opens) makes the browser pick its widest matching mode and
-   the cover-fit crop shrinks to almost nothing. */
+/* Ask the camera for its widest full frame — never a frame shaped
+   like the screen. An earlier version requested the pane's own tall
+   aspect ratio (plus a matching narrow width) as ideals, and
+   browsers honor that by handing back a narrow center slice of the
+   sensor: a cropped, digitally-zoomed frame — the "super zoomed in"
+   camera. Field of view is lost twice that way, because the preview
+   then cover-crops the slice again to fill the screen. So: no
+   aspect constraint at all, just a high-resolution ideal in the
+   camera's own terms (ideals, so a camera that can't match still
+   opens). The browser returns its widest native mode, and the
+   cover-fit preview shows the most of that frame a full-screen
+   preview can show. */
 function camVideoConstraints(){
-  const pane = $('view-camera');
-  const pw = (pane && pane.clientWidth) || window.innerWidth || 390;
-  const ph = (pane && pane.clientHeight) || window.innerHeight || 720;
-  const aspect = pw / Math.max(1, ph);
   return {
     facingMode: facing,
-    aspectRatio: { ideal: aspect },
-    width: { ideal: Math.round(1440 * aspect) },
-    height: { ideal: 1440 }
+    width: { ideal: 1920 },
+    height: { ideal: 1080 }
   };
 }
 async function openCameraStream(){
@@ -3008,7 +3008,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0021';
+const BLIP_VERSION = '2026.10.17.0022';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
