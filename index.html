@@ -32,7 +32,7 @@
   --danger:#e72b4e;
   --shadow:0 10px 34px rgba(15,16,20,.16);
   --ease:cubic-bezier(.22,.9,.32,1);
-  --tabbar-h:calc(46px + env(safe-area-inset-bottom));
+  --tabbar-h:calc(44px + env(safe-area-inset-bottom));
   --head-h:calc(56px + env(safe-area-inset-top));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -197,7 +197,7 @@ img{display:block}
 .f-act.msg:active{background:var(--yellow)}
 
 /* ---------- bottom nav ---------- */
-/* Compact bar: a slim content row (46px, see --tabbar-h) sitting on the
+/* Compact bar: a slim content row (44px, see --tabbar-h) sitting on the
    bottom safe-area inset, so the buttons hug the bottom edge of the
    screen instead of floating in a tall white slab. */
 #tabbar{
@@ -826,7 +826,7 @@ setIco($('btn-update-dismiss'), 'x');
 /* ---------- state ---------- */
 let me = null;
 let authMode = 'signup';
-let activeView = 'view-chats';
+let activeView = 'view-camera';
 let threadOther = null;
 let profilesCache = {};
 let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
@@ -837,6 +837,13 @@ let camStream = null, facing = 'user';
    getUserMedia on its own, so the permission prompt can appear at most
    once — only the explicit "Turn On Camera" button may try again. */
 let camDenied = false;
+/* The camera permission outcome, remembered on this device (in the same
+   local store as the read markers): 'granted' or 'denied'. A remembered
+   denial means the app never fires an automatic ask again on later
+   launches — the prompt is a once-ever thing unless the user taps
+   "Turn On Camera" themselves. */
+let camPerm = '';
+let camStarting = null;      // in-flight getUserMedia promise (single-flight)
 let camRunning = false;
 let storyState = { who: null, items: [], idx: 0, timer: null };
 let photoReturn = null;       // where to go after closing a photo message
@@ -880,11 +887,11 @@ function toast(msg){
 function loadLocal(){
   try {
     const raw = localStorage.getItem('blip_local_' + (me ? me.id : 'anon'));
-    if (raw) { const o = JSON.parse(raw); openedMap = o.opened || {}; nameChanged = !!o.nameChanged; }
+    if (raw) { const o = JSON.parse(raw); openedMap = o.opened || {}; nameChanged = !!o.nameChanged; camPerm = o.camPerm || ''; }
   } catch (e) {}
 }
 function saveLocal(){
-  try { localStorage.setItem('blip_local_' + me.id, JSON.stringify({ opened: openedMap, nameChanged })); } catch (e) {}
+  try { localStorage.setItem('blip_local_' + me.id, JSON.stringify({ opened: openedMap, nameChanged, camPerm })); } catch (e) {}
 }
 function markOpened(otherId){
   openedMap[otherId] = new Date().toISOString(); saveLocal();
@@ -1017,9 +1024,11 @@ async function enterApp(user){
   loadLocal();
   refreshMyAvatars();
   hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
-  // Land on Chats, not the camera: the camera (and its permission prompt)
-  // only starts when the user actually opens the Camera tab.
-  switchView('view-chats');
+  // Land on the camera — it's the first thing the app opens to. The one
+  // camera-permission ask happens on this first open; the grant (or a
+  // denial) is remembered on the device, so later launches open straight
+  // into the preview without asking again (see startCamera).
+  switchView('view-camera');
   loadFriends();
   loadChats(); loadStories();
   subscribeRealtime();
@@ -1539,33 +1548,55 @@ function subscribeRealtime(){
 function wireCamera(){
   $('btn-shutter').onclick = capturePhoto;
   // The one user-initiated retry: tapping "Turn On Camera" clears the
-  // denial latch so a single fresh ask is allowed; nothing else re-asks.
-  $('btn-cam-start').onclick = () => { camDenied = false; startCamera(); };
+  // denial latch (session and remembered) so a single fresh ask is
+  // allowed; nothing else ever re-asks.
+  $('btn-cam-start').onclick = () => { camDenied = false; camPerm = ''; saveLocal(); startCamera(); };
   $('btn-flip').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; stopCamera(); startCamera(); };
   const onFile = (e) => { const f = e.target.files[0]; if (f) uploadFallback(f); e.target.value = ''; };
   $('file-upload').onchange = onFile;
   $('file-upload2').onchange = onFile;
   wirePhoto();
 }
+function setCamPerm(v){
+  if (camPerm === v) return;
+  camPerm = v;
+  if (me) saveLocal();
+}
 async function startCamera(){
   hide($('cam-off'));
   if (camStream) { camRunning = true; requestAnimationFrame(camTick); return; }
-  // Asked and refused once already (this session): never ask again on our
-  // own — iOS re-prompts on a fresh getUserMedia once the old stream is
-  // gone, which is what made it feel like it asked every single time.
-  // Just show the off state with the upload option.
-  if (camDenied) { show($('cam-off')); return; }
-  // A denial the browser still remembers from before gets the same
-  // treatment: latch it and don't fire a request that would prompt again.
+  // Asked and refused (this session, or remembered from an earlier one):
+  // never ask again on our own — iOS re-prompts on a fresh getUserMedia
+  // once the old stream is gone, which is what made it feel like it asked
+  // every single time. Just show the off state with the upload option.
+  if (camDenied || camPerm === 'denied') { camDenied = true; show($('cam-off')); return; }
+  // Single-flight: overlapping opens (launch + tab tap) share one ask, so
+  // the prompt can never fire twice back to back.
+  if (camStarting) {
+    await camStarting;
+    if (camStream) { camRunning = true; requestAnimationFrame(camTick); }
+    else show($('cam-off'));
+    return;
+  }
+  camStarting = openCameraStream();
+  await camStarting;
+  camStarting = null;
+}
+async function openCameraStream(){
+  // A denial the browser still remembers gets the same treatment: latch
+  // it (for this session and on the device) and don't fire a request
+  // that would prompt again. A remembered grant is recorded too.
   if (navigator.permissions && navigator.permissions.query) {
     try {
       const st = await navigator.permissions.query({ name: 'camera' });
-      if (st.state === 'denied') { camDenied = true; show($('cam-off')); return; }
+      if (st.state === 'denied') { camDenied = true; setCamPerm('denied'); show($('cam-off')); return; }
+      if (st.state === 'granted') setCamPerm('granted');
     } catch (e) {}
   }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
-  } catch (e) { camDenied = true; show($('cam-off')); return; }
+  } catch (e) { camDenied = true; setCamPerm('denied'); show($('cam-off')); return; }
+  setCamPerm('granted');
   const v = document.createElement('video');
   v.srcObject = camStream; v.muted = true; v.playsInline = true;
   await v.play();
@@ -2272,6 +2303,10 @@ function cleanupCall(){
   const av = $('call-avatar'); if (av) av.style.display = '';
   hide($('screen-call'));
   maybeShowUpdateBanner(); // an update found mid-call is only shown now
+  // The call released the preview stream; if the camera is the visible
+  // view, bring the preview back. Permission was already granted this
+  // session, so this never prompts again.
+  if (activeView === 'view-camera') startCamera();
 }
 function fmtDur(s){ return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function setCallStatus(t){ $('call-status').textContent = t; }
@@ -2472,7 +2507,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0013';
+const BLIP_VERSION = '2026.10.17.0014';
 let updateAvailable = false;
 let updateDismissed = false;
 async function checkForUpdate(){
@@ -2495,16 +2530,28 @@ $('btn-update-now').onclick = () => { if (!callState) location.reload(); };
 $('btn-update-dismiss').onclick = () => { updateDismissed = true; hide($('update-banner')); };
 
 /* ---------- viewport fit + root color (the "white bar" fix) ---------- */
-/* --app-h: the stage's height, measured from window.innerHeight (the full
-   device height in a home-screen app) instead of trusting the layout
-   viewport, which iOS can report short of the screen at cold launch or
-   leave shrunk after the keyboard closes. Re-measured whenever the
-   viewport settles; a shrink reported while a text field is focused is
-   the keyboard opening and is ignored, then re-measured after blur. */
+/* --app-h: the stage's height. window.innerHeight alone can come back
+   short of the physical screen in an iOS home-screen app (at cold launch,
+   or left shrunk after the keyboard), which floats the tab bar up the
+   screen with a white strip under it — so every measurement the browser
+   offers is considered and the largest wins, and in an installed
+   (standalone) app in portrait the physical screen height is the floor:
+   the screen size never reports short. Re-measured whenever the viewport
+   settles; a shrink reported while a text field is focused is the
+   keyboard opening and is ignored, then re-measured after blur. */
 function fitStage(){
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
-  const h = window.innerHeight;
+  let h = window.innerHeight || 0;
+  const de = document.documentElement;
+  if (de && de.clientHeight) h = Math.max(h, de.clientHeight);
+  if (window.visualViewport) h = Math.max(h, Math.round(window.visualViewport.height + window.visualViewport.offsetTop));
+  const standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (standalone && window.screen && window.screen.height > h &&
+      window.innerWidth <= window.innerHeight && h > window.screen.height * 0.55) {
+    h = window.screen.height;
+  }
   if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 function fitStageSoon(){ fitStage(); setTimeout(fitStage, 150); setTimeout(fitStage, 500); }
