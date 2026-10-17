@@ -199,22 +199,29 @@ img{display:block}
 /* ---------- bottom nav ---------- */
 /* Compact bar: a slim content row (44px, see --tabbar-h) sitting on the
    bottom safe-area inset, so the buttons hug the bottom edge of the
-   screen instead of floating in a tall white slab. */
+   screen instead of floating in a tall white slab. The bar is positioned
+   with its own stacking layer so it (and the raised camera button riding
+   its top edge) always paints above the scrolling pane instead of being
+   sliced by it, and the camera button is anchored to the bar's top edge
+   with a transform rather than a negative margin inside the flex row —
+   the old in-flow overflow is what got clipped flush with the bar. */
 #tabbar{
+  position:relative;z-index:10;
   height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
-  display:flex;align-items:flex-start;background:#fff;border-top:1px solid var(--line);flex:none;z-index:6;
+  display:flex;align-items:stretch;background:#fff;border-top:1px solid var(--line);flex:none;
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:5px;color:#68727f;font-size:10px;font-weight:700}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;padding-top:6px;color:#68727f;font-size:10px;font-weight:700}
 .tab svg{width:23px;height:23px}
 .tab.active{color:var(--yellow)}
 .tab-cam-btn{
-  width:50px;height:50px;border-radius:50%;background:var(--yellow);
-  display:flex;align-items:center;justify-content:center;margin-top:-11px;
+  position:absolute;left:50%;top:0;transform:translate(-50%,-50%);
+  width:52px;height:52px;border-radius:50%;background:var(--yellow);
+  display:flex;align-items:center;justify-content:center;
   box-shadow:0 4px 14px rgba(0,0,0,.18);border:3px solid #fff;color:#000;transition:transform .12s;
 }
-.tab-cam-btn:active{transform:scale(.93)}
+.tab-cam-btn:active{transform:translate(-50%,-50%) scale(.93)}
 .tab-cam-btn svg{width:25px;height:25px}
-.tab-cam-wrap{flex:1;display:flex;flex-direction:column;align-items:center}
+.tab-cam-wrap{flex:1;position:relative}
 
 /* ---------- camera ---------- */
 #cam-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
@@ -254,16 +261,19 @@ img{display:block}
 .edit-text.band{left:0!important;transform:translateY(-50%);width:100%;max-width:100%;background:rgba(0,0,0,.55);border-radius:0;padding:.3em .5em}
 .edit-text.big{text-shadow:-2px -2px 0 rgba(0,0,0,.85),2px -2px 0 rgba(0,0,0,.85),-2px 2px 0 rgba(0,0,0,.85),2px 2px 0 rgba(0,0,0,.85),0 -2px 0 rgba(0,0,0,.85),0 2px 0 rgba(0,0,0,.85),-2px 0 0 rgba(0,0,0,.85),2px 0 0 rgba(0,0,0,.85)}
 .edit-text.sel{outline:2px dashed rgba(255,255,255,.85);outline-offset:2px}
-.edit-colors{flex:none;display:flex;align-items:center;gap:9px;padding:10px 14px 2px;overflow-x:auto}
+.edit-text.editing{cursor:text;user-select:text;-webkit-user-select:text;min-width:64px;caret-color:#fff}
+.edit-text.editing:empty::before{content:"Type something";opacity:.6}
+.edit-colors{flex:none;display:flex;align-items:center;gap:7px;padding:10px 12px 2px;overflow-x:auto;scrollbar-width:none}
 .edit-colors::-webkit-scrollbar{display:none}
-.swatch{width:30px;height:30px;border-radius:50%;flex:none;border:2.5px solid rgba(255,255,255,.35);transition:transform .1s}
+.swatch{width:26px;height:26px;border-radius:50%;flex:none;border:2.5px solid rgba(255,255,255,.35);transition:transform .1s}
 .swatch.on{border-color:#fff;transform:scale(1.18)}
-.edit-tool-btn{flex:none;display:flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.16);border-radius:999px;padding:8px 13px;font-size:13.5px;font-weight:700}
-.edit-tool-btn svg{width:17px;height:17px}
+.edit-fonts{flex:none;display:flex;align-items:center;gap:7px;padding:8px 12px 0;overflow-x:auto;scrollbar-width:none}
+.edit-fonts::-webkit-scrollbar{display:none}
+.font-chip{flex:none;min-width:46px;height:38px;padding:0 9px;border-radius:11px;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;border:2px solid transparent}
+.font-chip.on{border-color:#fff;background:rgba(255,255,255,.28)}
+.edit-tool-btn{flex:none;display:flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.16);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700}
+.edit-tool-btn svg{width:16px;height:16px}
 .edit-bottom{flex:none;display:flex;justify-content:flex-end;padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
-.edit-input-wrap{position:absolute;left:0;right:0;top:calc(64px + env(safe-area-inset-top));z-index:6;display:flex;gap:9px;padding:0 14px;align-items:flex-start}
-.edit-input-wrap textarea{flex:1;background:rgba(20,20,24,.94);border:1.5px solid rgba(255,255,255,.5);border-radius:14px;color:#fff;font:inherit;font-size:17px;font-weight:700;padding:11px 14px;outline:none;resize:none;max-height:110px}
-.edit-input-wrap textarea::placeholder{color:rgba(255,255,255,.55)}
 
 /* ---------- placeholder pane (map) ---------- */
 .ph-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 34px;text-align:center}
@@ -630,12 +640,9 @@ img{display:block}
       </div>
     </div>
     <div class="edit-colors hidden" id="edit-colors"></div>
+    <div class="edit-fonts hidden" id="edit-fonts"></div>
     <div class="edit-bottom">
-      <button class="btn-white" id="btn-edit-done">Done</button>
-    </div>
-    <div class="edit-input-wrap hidden" id="edit-input-wrap">
-      <textarea id="edit-input" rows="1" maxlength="120" placeholder="Type something…"></textarea>
-      <button class="btn-white" id="btn-edit-input-done" style="padding:11px 20px">OK</button>
+      <button class="btn-white" id="btn-edit-done">Send</button>
     </div>
   </div>
 
@@ -1689,7 +1696,7 @@ function camTick(){
 function capturePhoto(){
   const canvas = $('cam-canvas');
   if (!canvas.width) { show($('cam-off')); return; }
-  // Into the editor first (text, drawing) — uploading happens on Done.
+  // Into the editor first (text, drawing) — uploading happens on Send.
   openEditor(canvas);
 }
 async function uploadFallback(file){
@@ -1714,12 +1721,23 @@ async function uploadImage(blob){
 /* ---------- photo editor: Snapchat-style text + freehand drawing ----------
    Opens on every captured or uploaded photo. Text overlays live as DOM
    elements over the canvas (draggable, recolorable, two styles: the
-   classic full-width band and big outlined text); drawing strokes are
-   painted straight onto the canvas over a pristine copy of the photo.
-   Done flattens everything into one JPEG and hands it to the send sheet. */
+   classic full-width band and big outlined text, in a choice of fonts).
+   Tap a text to type straight into it on the photo — what you type is
+   what you see, live. Drawing strokes are painted straight onto the
+   canvas over a pristine copy of the photo. Send flattens everything
+   into one JPEG and opens the chat picker. */
 const EDIT_COLORS = ['#ffffff','#000000','#ffd60a','#ff3b30','#ff9500','#34c759','#0fadff','#8329c9','#ff5da2'];
+const EDIT_FONTS = [
+  { id: 'classic', label: 'Aa', css: '"Helvetica Neue",Helvetica,Arial,sans-serif', weight: 800 },
+  { id: 'serif',   label: 'Aa', css: 'Georgia,"Times New Roman",serif', weight: 700 },
+  { id: 'type',    label: 'Aa', css: '"Courier New",Courier,monospace', weight: 700 },
+  { id: 'rounded', label: 'Aa', css: '"Arial Rounded MT Bold","Helvetica Rounded",Arial,sans-serif', weight: 800 },
+  { id: 'marker',  label: 'Aa', css: '"Marker Felt","Comic Sans MS","Chalkboard SE",cursive', weight: 700 },
+  { id: 'script',  label: 'Aa', css: '"Snell Roundhand","Brush Script MT",cursive', weight: 700 }
+];
+function editFont(t){ return EDIT_FONTS.find(f => f.id === (t && t.font)) || EDIT_FONTS[0]; }
 let editState = null;   // { base, strokes, texts, selected, drawing, penColor, current, dispW }
-let editingText = null; // text overlay currently being typed into
+let editingText = null; // text overlay currently being typed into, in place
 
 function wireEditor(){
   setIco($('btn-edit-close'), 'x'); setIco($('btn-edit-undo'), 'undo'); setIco($('btn-edit-draw'), 'pencil');
@@ -1728,22 +1746,16 @@ function wireEditor(){
   $('btn-edit-text').onclick = () => addEditText();
   $('btn-edit-draw').onclick = toggleDrawMode;
   $('btn-edit-undo').onclick = undoStroke;
-  $('btn-edit-input-done').onclick = commitEditText;
-  $('edit-input').addEventListener('input', () => {
-    const inp = $('edit-input');
-    inp.style.height = 'auto';
-    inp.style.height = Math.min(110, inp.scrollHeight) + 'px';
-  });
-  $('edit-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEditText(); }
-  });
   const cv = $('edit-canvas');
   cv.addEventListener('pointerdown', onDrawStart);
   cv.addEventListener('pointermove', onDrawMove);
   cv.addEventListener('pointerup', onDrawEnd);
   cv.addEventListener('pointercancel', onDrawEnd);
   $('edit-stage').addEventListener('pointerdown', (e) => {
-    if (e.target === $('edit-stage') || e.target === $('edit-wrap') || e.target === $('edit-texts')) selectEditText(null);
+    if (e.target === $('edit-stage') || e.target === $('edit-wrap') || e.target === $('edit-texts')) {
+      if (editingText) endInlineEdit();
+      selectEditText(null);
+    }
   });
 }
 function openEditor(source){
@@ -1754,7 +1766,7 @@ function openEditor(source){
   editingText = null;
   $('edit-texts').innerHTML = '';
   $('edit-texts').classList.remove('locked');
-  hide($('edit-input-wrap'));
+  $('edit-fonts').classList.add('hidden');
   const cv = $('edit-canvas');
   cv.width = base.width; cv.height = base.height;
   show($('screen-editor'));
@@ -1772,7 +1784,7 @@ function openEditor(source){
   updateEditorTools();
 }
 function closeEditor(){
-  hide($('edit-input-wrap'));
+  if (editingText) endInlineEdit();
   hide($('screen-editor'));
   editState = null; editingText = null;
 }
@@ -1800,8 +1812,9 @@ function renderEditColors(){
   const es = editState, row = $('edit-colors');
   const showRow = !!es && (es.drawing || !!es.selected);
   row.classList.toggle('hidden', !showRow);
+  renderEditFonts();
   if (!showRow) return;
-  row.innerHTML = '';
+  row.innerHTML = ''; row.scrollLeft = 0;
   const activeColor = es.drawing ? es.penColor : es.selected.color;
   EDIT_COLORS.forEach(c => {
     const b = document.createElement('button');
@@ -1820,6 +1833,7 @@ function renderEditColors(){
     styleBtn.className = 'edit-tool-btn'; styleBtn.textContent = 'Style';
     styleBtn.onclick = () => {
       const t = es.selected;
+      if (!t) return;
       t.style = t.style === 'band' ? 'big' : 'band';
       if (t.style === 'band') t.x = 0.5;
       layoutEditText(t);
@@ -1827,19 +1841,38 @@ function renderEditColors(){
     row.appendChild(styleBtn);
     const delBtn = document.createElement('button');
     delBtn.className = 'edit-tool-btn'; delBtn.innerHTML = IC.trash + '<span>Delete</span>';
-    delBtn.onclick = () => removeEditText(es.selected);
+    delBtn.onclick = () => { if (es.selected) removeEditText(es.selected); };
     row.appendChild(delBtn);
   }
+}
+function renderEditFonts(){
+  const es = editState, row = $('edit-fonts');
+  const showRow = !!es && !!es.selected && !es.drawing;
+  row.classList.toggle('hidden', !showRow);
+  if (!showRow) return;
+  row.innerHTML = ''; row.scrollLeft = 0;
+  EDIT_FONTS.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'font-chip' + (es.selected.font === f.id ? ' on' : '');
+    b.textContent = f.label;
+    b.style.fontFamily = f.css;
+    b.style.fontWeight = f.weight;
+    b.setAttribute('aria-label', 'Font ' + f.id);
+    b.onclick = () => { if (!es.selected) return; es.selected.font = f.id; layoutEditText(es.selected); renderEditFonts(); };
+    row.appendChild(b);
+  });
 }
 /* ----- text overlays ----- */
 function layoutEditText(t){
   const es = editState; if (!es) return;
-  const el = t.el;
+  const el = t.el, f = editFont(t);
   el.style.fontSize = Math.max(13, Math.round(es.dispW * t.fontFrac)) + 'px';
+  el.style.fontFamily = f.css;
+  el.style.fontWeight = f.weight;
   el.style.color = t.color;
-  el.textContent = t.text || 'Text';
-  el.style.opacity = t.text ? '1' : '.65';
-  el.className = 'edit-text ' + t.style + (es.selected === t ? ' sel' : '');
+  if (editingText !== t) el.textContent = t.text || 'Text';
+  el.style.opacity = (t.text || editingText === t) ? '1' : '.65';
+  el.className = 'edit-text ' + t.style + (es.selected === t ? ' sel' : '') + (editingText === t ? ' editing' : '');
   el.style.top = (t.y * 100) + '%';
   el.style.left = ((t.style === 'band' ? 0.5 : t.x) * 100) + '%';
 }
@@ -1852,26 +1885,33 @@ function selectEditText(t){
 function addEditText(){
   const es = editState; if (!es) return;
   if (es.drawing) toggleDrawMode();
-  const t = { text: '', color: '#ffffff', style: 'band', x: 0.5, y: 0.42, fontFrac: 0.062, el: document.createElement('div') };
+  if (editingText) endInlineEdit();
+  if (!editState) return;
+  const t = { text: '', color: '#ffffff', style: 'band', font: 'classic', x: 0.5, y: 0.42, fontFrac: 0.062, el: document.createElement('div') };
   es.texts.push(t);
   $('edit-texts').appendChild(t.el);
   wireTextEl(t);
   selectEditText(t);
-  openTextInput(t);
+  startInlineEdit(t);
 }
 function removeEditText(t){
-  const es = editState; if (!es) return;
+  const es = editState; if (!es || !t) return;
   es.texts = es.texts.filter(x => x !== t);
+  if (editingText === t) { editingText = null; t.el.contentEditable = 'false'; }
   t.el.remove();
   if (es.selected === t) es.selected = null;
-  if (editingText === t) { editingText = null; hide($('edit-input-wrap')); }
   renderEditColors();
 }
 function wireTextEl(t){
   const el = t.el;
+  el.spellcheck = false;
+  el.setAttribute('autocapitalize', 'sentences');
   let drag = null;
   el.addEventListener('pointerdown', (e) => {
     if (!editState || editState.drawing) return;
+    if (editingText === t) return; // typing in place: let the tap place the caret
+    if (editingText) endInlineEdit();
+    if (!editState) return;
     e.preventDefault();
     drag = { startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false, wasSelected: editState.selected === t };
     selectEditText(t);
@@ -1894,27 +1934,52 @@ function wireTextEl(t){
     if (!drag) return;
     const tapEdit = drag.wasSelected && !drag.moved;
     drag = null;
-    if (tapEdit) openTextInput(t);
+    if (tapEdit) startInlineEdit(t);
   };
   el.addEventListener('pointerup', endDrag);
   el.addEventListener('pointercancel', () => { drag = null; });
+  // Live sync: the overlay IS the editor — every keystroke updates the
+  // text on the photo in real time, nothing is typed into a separate box.
+  el.addEventListener('input', () => {
+    if (editingText !== t) return;
+    let v = el.innerText || '';
+    if (v.length > 120) { v = v.slice(0, 120); }
+    t.text = v.replace(/\n+$/, '');
+    el.style.opacity = '1';
+  });
+  el.addEventListener('blur', () => { if (editingText === t) endInlineEdit(); });
 }
-function openTextInput(t){
+/* ----- in-place typing on the photo ----- */
+function startInlineEdit(t){
+  const es = editState; if (!es || editingText === t) return;
+  if (editingText) endInlineEdit();
+  if (!editState) return;
   editingText = t;
-  const inp = $('edit-input');
-  inp.value = t.text || '';
-  show($('edit-input-wrap'));
-  inp.style.height = 'auto';
-  inp.style.height = Math.min(110, inp.scrollHeight) + 'px';
-  setTimeout(() => { try { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {} }, 60);
+  selectEditText(t);
+  const el = t.el;
+  el.textContent = t.text || '';
+  el.contentEditable = 'true';
+  layoutEditText(t);
+  setTimeout(() => {
+    if (editingText !== t) return;
+    try {
+      el.focus();
+      const sel = window.getSelection(), range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel.removeAllRanges(); sel.addRange(range);
+    } catch (e) {}
+  }, 40);
 }
-function commitEditText(){
-  hide($('edit-input-wrap'));
-  const t = editingText; editingText = null;
-  if (document.activeElement) document.activeElement.blur();
-  if (!t || !editState) return;
-  t.text = $('edit-input').value.trim();
-  if (!t.text) { removeEditText(t); return; }
+function endInlineEdit(){
+  const t = editingText; if (!t) return;
+  editingText = null;
+  const el = t.el;
+  el.contentEditable = 'false';
+  try { el.blur(); } catch (e) {}
+  t.text = (el.innerText || '').replace(/\s+$/, '');
+  if (!editState) return;
+  if (!t.text.trim()) { removeEditText(t); return; }
   layoutEditText(t);
 }
 /* ----- drawing ----- */
@@ -1954,8 +2019,8 @@ function undoStroke(){
 }
 /* ----- flatten + send ----- */
 function drawTextExport(ctx, t, W, H){
-  const fontPx = Math.round(t.fontFrac * W);
-  ctx.font = '800 ' + fontPx + 'px "Helvetica Neue",Helvetica,Arial,sans-serif';
+  const fontPx = Math.round(t.fontFrac * W), f = editFont(t);
+  ctx.font = f.weight + ' ' + fontPx + 'px ' + f.css;
   const maxW = W * (t.style === 'band' ? 0.9 : 0.94);
   const lines = [];
   t.text.split('\n').forEach(part => {
@@ -1994,7 +2059,7 @@ function drawTextExport(ctx, t, W, H){
 }
 async function finishEditor(){
   if (!editState) return;
-  if (!$('edit-input-wrap').classList.contains('hidden')) commitEditText();
+  if (editingText) endInlineEdit();
   if (!editState) return;
   const out = document.createElement('canvas');
   out.width = editState.base.width; out.height = editState.base.height;
@@ -2573,7 +2638,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0015';
+const BLIP_VERSION = '2026.10.17.0016';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
