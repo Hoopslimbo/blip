@@ -2003,23 +2003,22 @@ async function startCamera(explicit){
   camStarting = null;
   if (camStream) hide($('cam-off')); else show($('cam-off'));
 }
-/* Ask the camera for its widest full frame — never a frame shaped
-   like the screen. An earlier version requested the pane's own tall
-   aspect ratio (plus a matching narrow width) as ideals, and
-   browsers honor that by handing back a narrow center slice of the
-   sensor: a cropped, digitally-zoomed frame — the "super zoomed in"
-   camera. Field of view is lost twice that way, because the preview
-   then cover-crops the slice again to fill the screen. So: no
-   aspect constraint at all, just a high-resolution ideal in the
-   camera's own terms (ideals, so a camera that can't match still
-   opens). The browser returns its widest native mode, and the
-   cover-fit preview shows the most of that frame a full-screen
-   preview can show. */
+/* Ask the camera for the tall portrait frame the app originally
+   used — the frame shaped like the phone screen, so the preview
+   fills the screen edge to edge and captured photos come out
+   portrait, the way they did before the wide-frame experiment.
+   (A brief detour asked for a 1920x1080 landscape frame instead:
+   the preview cover-cropped it and photos landed wide in the
+   editor. Reverted at the user's request.) The pane's own aspect
+   ratio and matching portrait dimensions are passed as ideals, so
+   a camera that can't match exactly still opens. */
 function camVideoConstraints(){
+  const ar = window.innerWidth / Math.max(1, window.innerHeight);
   return {
     facingMode: facing,
-    width: { ideal: 1920 },
-    height: { ideal: 1080 }
+    width: { ideal: 1080 },
+    height: { ideal: Math.round(1080 / ar) },
+    aspectRatio: { ideal: ar }
   };
 }
 async function openCameraStream(){
@@ -3008,7 +3007,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0022';
+const BLIP_VERSION = '2026.10.17.0023';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
