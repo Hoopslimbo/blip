@@ -201,7 +201,6 @@ img{display:block}
   background:var(--bg);border-bottom:1px solid var(--line);flex:none;z-index:5;
 }
 .app-head .title{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:21px;font-weight:800;letter-spacing:-.01em}
-.title-logo{width:27px;height:27px;border-radius:8px;flex:none}
 .head-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);flex:none;transition:background .15s}
 .head-btn:active{background:var(--soft)}
 .head-btn svg{width:24px;height:24px}
@@ -708,7 +707,7 @@ img{display:block}
   <div id="screen-profile" class="screen over hidden">
     <header class="app-head" style="border-bottom:0">
       <button class="head-btn" id="btn-profile-back" aria-label="Back"></button>
-      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Profile</div>
+      <div class="title">Profile</div>
       <button class="head-btn" id="btn-open-settings" aria-label="Settings"></button>
     </header>
     <div class="profile-scroll">
@@ -734,7 +733,7 @@ img{display:block}
   <div id="screen-settings" class="screen over hidden">
     <header class="app-head">
       <button class="head-btn" id="btn-settings-back" aria-label="Back"></button>
-      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Settings</div>
+      <div class="title">Settings</div>
       <span style="width:38px"></span>
     </header>
     <div class="viewpane" style="padding:20px 16px 30px">
@@ -833,7 +832,7 @@ img{display:block}
   <div id="screen-friends" class="screen over hidden">
     <header class="app-head">
       <button class="head-btn" id="btn-friends-back" aria-label="Back"></button>
-      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Friends</div>
+      <div class="title">Friends</div>
       <span style="width:38px"></span>
     </header>
     <div class="viewpane" style="padding:14px 16px 26px">
@@ -853,7 +852,7 @@ img{display:block}
   <div id="screen-user" class="screen over hidden">
     <header class="app-head" style="border-bottom:0">
       <button class="head-btn" id="btn-user-back" aria-label="Back"></button>
-      <div class="title"><img class="title-logo" src="assets/comet.png" alt="">Profile</div>
+      <div class="title">Profile</div>
       <span style="width:38px"></span>
     </header>
     <div class="profile-scroll">
@@ -3526,7 +3525,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.2015';
+const BLIP_VERSION = '2026.10.17.2016';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
