@@ -591,6 +591,51 @@ img{display:block}
 #btn-update-now:active{transform:scale(.95)}
 #btn-update-dismiss{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--inkbtn-fg);opacity:.7;flex:none}
 #btn-update-dismiss svg{width:15px;height:15px}
+/* ---------- no-camera devices ---------- */
+/* When detection finds no camera on this device at all, every piece
+   of camera UI goes away: the bottom bar's raised camera button, the
+   camera view itself (shutter and all), the thread's photo button,
+   and the desktop sidebar's Camera item. */
+body.no-camera .tab-cam-wrap,
+body.no-camera #view-camera,
+body.no-camera #btn-thread-cam,
+body.no-camera .side-item[data-side="view-camera"]{display:none!important}
+
+/* ---------- desktop layout ---------- */
+/* On a computer (wide screen + a fine pointer, i.e. mouse/trackpad)
+   the phone frame widens and navigation moves from the bottom bar
+   into a left sidebar. Phones and narrow windows keep the exact
+   layout above — this block simply never matches there. */
+#sidebar{display:none}
+@media (min-width:900px) and (pointer:fine){
+  #stage{max-width:900px}
+  #screen-main{flex-direction:row}
+  #screen-main>*{min-width:0}
+  #sidebar{
+    display:flex;flex-direction:column;width:250px;flex:none;z-index:6;
+    background:var(--bg);border-right:1px solid var(--line);
+    padding:24px 14px 16px;gap:4px;
+  }
+  .side-nav{display:flex;flex-direction:column;gap:4px}
+  .side-item{
+    display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+    padding:12px 14px;border-radius:14px;font-size:16px;font-weight:700;
+    color:var(--ink2);transition:background .15s,color .15s;
+  }
+  .side-item [data-ico]{display:flex;line-height:0}
+  .side-item svg{width:25px;height:25px}
+  .side-item:hover{background:var(--soft)}
+  .side-item.active{background:var(--soft);color:var(--yellow)}
+  .side-me{
+    margin-top:auto;display:flex;align-items:center;gap:11px;width:100%;
+    padding:10px;border-radius:14px;text-align:left;transition:background .15s;
+  }
+  .side-me:hover{background:var(--soft)}
+  .side-me .avatar{width:42px;height:42px;font-size:18px;flex:none}
+  .side-me-name{font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tabbar{display:none}
+  #toast{bottom:26px}
+}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -623,6 +668,19 @@ img{display:block}
 
   <!-- ============ MAIN ============ -->
   <div id="screen-main" class="screen hidden">
+    <!-- Desktop sidebar nav (only shown by the desktop media query) -->
+    <aside id="sidebar">
+      <nav class="side-nav">
+        <button class="side-item" data-side="view-chats"><span data-ico="chat"></span><span>Chat</span></button>
+        <button class="side-item" data-side="view-camera"><span data-ico="camera"></span><span>Camera</span></button>
+        <button class="side-item" data-side="view-stories"><span data-ico="earth"></span><span>Stories</span></button>
+        <button class="side-item" id="side-friends"><span data-ico="addUser"></span><span>Friends</span></button>
+        <button class="side-item" id="side-profile"><span data-ico="person"></span><span>Profile</span></button>
+        <button class="side-item" id="side-settings"><span data-ico="gear"></span><span>Settings</span></button>
+      </nav>
+      <button class="side-me" id="side-me" aria-label="Your profile"></button>
+    </aside>
+
     <!-- Chats -->
     <div id="view-chats" class="viewpane-wrap" style="display:flex;flex-direction:column;flex:1;min-height:0">
       <header class="app-head">
@@ -655,6 +713,9 @@ img{display:block}
       <div id="cam-off" class="cam-msg hidden">
         <p>Camera Is Off</p>
         <button id="btn-cam-start" class="btn-white">Turn On Camera</button>
+      </div>
+      <div id="cam-nocam" class="cam-msg hidden">
+        <p>No camera found on this device</p>
       </div>
       <div class="cam-bottom">
         <div id="rec-bar" class="hidden"><span class="rec-dot"></span><span id="rec-time">0:00</span></div>
@@ -1023,6 +1084,7 @@ const IC = {
   play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5" width="16.8" height="14" rx="4"/><path d="M10.4 9.4v5.2L15 12Z" fill="currentColor" stroke="none"/></svg>',
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="6.4"/><path d="M20 20l-3.9-3.9"/></svg>',
   addUser:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8.2" r="3.6"/><path d="M3.8 19.6c.8-3.2 3.2-4.9 6.2-4.9s5.4 1.7 6.2 4.9"/><path d="M18.6 5.4v5M16.1 7.9h5"/></svg>',
+  person:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.8"/><path d="M5 20c.9-3.6 3.6-5.4 7-5.4s6.1 1.8 7 5.4"/></svg>',
   flip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.5A8 8 0 0 1 19 6.4M19.5 14.5A8 8 0 0 1 5 17.6"/><path d="M19.3 2.8v3.8h-3.8M4.7 21.2v-3.8h3.8"/></svg>',
   bolt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.8 5.4 13.4h5L9.6 21.2l7.8-10.6h-5.1Z"/></svg>',
   boltOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.8 5.4 13.4h5L9.6 21.2l7.8-10.6h-5.1Z"/><path d="M4 4l16 16"/></svg>',
@@ -1153,6 +1215,7 @@ function markOpened(otherId){
 
 /* ---------- auth ---------- */
 async function init(){
+  detectCameraPresence(); // find out if this device has a camera at all — never prompts
   wireAuth(); wireNav(); wireProfile(); wireSettings(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor(); wireCropper();
   // The service worker asks us to re-subscribe when the push service rotates
   // our subscription ('pushsubscriptionchange').
@@ -1297,16 +1360,27 @@ function refreshMyAvatars(){
   $('cam-me').firstChild.onclick = openProfile;
   $('cam-me').firstChild.style.width = '34px'; $('cam-me').firstChild.style.height = '34px';
   $('cam-me').firstChild.style.border = '2px solid rgba(255,255,255,.9)';
+  // Desktop sidebar user card (only visible in the desktop layout).
+  const sm = $('side-me');
+  if (sm) { sm.innerHTML = avatarHTML(me, 'sm') + '<span class="side-me-name">' + esc(me.display_name) + '</span>'; sm.onclick = openProfile; }
 }
 
 /* ---------- navigation ---------- */
 function wireNav(){
   document.querySelectorAll('.tab').forEach(t => { t.onclick = () => switchView(t.dataset.view); });
   $('tab-cam').onclick = () => switchView('view-camera');
+  // Desktop sidebar: same views, plus the overlay screens.
+  document.querySelectorAll('.side-item[data-side]').forEach(b => { b.onclick = () => switchView(b.dataset.side); });
+  $('side-friends').onclick = openFriends;
+  $('side-profile').onclick = openProfile;
+  $('side-settings').onclick = openSettings;
 }
 function switchView(v){
+  // A device with no camera has no camera view to switch to.
+  if (v === 'view-camera' && camPresent === false) { toast('No camera found on this device'); v = 'view-chats'; }
   activeView = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  document.querySelectorAll('.side-item[data-side]').forEach(b => b.classList.toggle('active', b.dataset.side === v));
   ['view-chats','view-camera','view-stories'].forEach(id => $(id).classList.toggle('hidden', id !== v));
   // Leaving the camera tab only pauses the preview render — the stream is
   // kept alive so coming back never re-asks for camera permission. Calls
@@ -2254,6 +2328,60 @@ function setCamPerm(v){
   camPerm = v;
   if (me) saveLocal();
 }
+/* ---------- camera presence ----------
+   Before ANY camera permission request, find out whether this
+   device has a camera at all. enumerateDevices() never prompts —
+   it lists device kinds even before permission is granted (labels
+   stay blank, kinds don't) — so finding no 'videoinput' entry means
+   there is no camera to ask permission for, and getUserMedia is
+   never fired. The answer is cached; a devicechange (a camera
+   plugged in or unplugged) re-checks. When no camera exists,
+   applyCameraAvailability strips every piece of camera UI from the
+   app: the nav camera buttons (bottom bar and desktop sidebar), the
+   camera view with its shutter, and the thread's photo button. */
+let camPresent = null;       // null = not checked yet, true/false once enumerated
+let camPresencePromise = null;
+let camWatchOn = false;
+function detectCameraPresence(){
+  if (!camWatchOn && navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    camWatchOn = true;
+    navigator.mediaDevices.addEventListener('devicechange', () => {
+      camPresent = null; camPresencePromise = null; detectCameraPresence();
+    });
+  }
+  if (camPresencePromise) return camPresencePromise;
+  camPresencePromise = (async () => {
+    let has = true; // if we cannot enumerate, behave exactly as before
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        has = devs.some(d => d.kind === 'videoinput');
+      }
+    } catch (e) {}
+    camPresent = has;
+    applyCameraAvailability();
+    return has;
+  })();
+  return camPresencePromise;
+}
+async function deviceHasCamera(){
+  if (camPresent !== null) return camPresent;
+  return detectCameraPresence();
+}
+function applyCameraAvailability(){
+  document.body.classList.toggle('no-camera', camPresent === false);
+  if (camPresent === false && activeView === 'view-camera') switchView('view-chats');
+}
+/* The camera view's off state has two faces: "Camera Is Off" (there
+   is a camera, it is just not running — with the Turn On button) and
+   "No camera found on this device" (no camera exists at all, so no
+   button: there is nothing to turn on and nothing to ask about). */
+function showCamOffState(){
+  if (camPresent === false) { hide($('cam-off')); show($('cam-nocam')); }
+  else { hide($('cam-nocam')); show($('cam-off')); }
+}
+function hideCamOffState(){ hide($('cam-off')); hide($('cam-nocam')); }
+
 /* Every camera start — automatic (app launch, tab switches, coming
    back from a call) or explicit (the "Turn On Camera" button) — goes
    straight to getUserMedia. The browser itself decides whether a
@@ -2272,7 +2400,7 @@ function setCamPerm(v){
 async function startCamera(explicit){
   if (camStream) {
     const vt = camStream.getVideoTracks()[0];
-    if (vt && vt.readyState === 'live') { hide($('cam-off')); camRunning = true; kickCamTick(); return; }
+    if (vt && vt.readyState === 'live') { hideCamOffState(); camRunning = true; kickCamTick(); return; }
     // iOS ended the tracks while the app was suspended — the stream
     // object is a corpse. Drop it and fall through to re-acquire, so
     // the preview never sits frozen on a dead stream.
@@ -2281,7 +2409,11 @@ async function startCamera(explicit){
   // Asked and refused (this session, or remembered from an earlier one):
   // never ask again on our own. Just show the off state and the one
   // explicit retry button.
-  if (camDenied || camPerm === 'denied') { camDenied = true; show($('cam-off')); return; }
+  if (camDenied || camPerm === 'denied') { camDenied = true; showCamOffState(); return; }
+  // No camera hardware at all: never fire getUserMedia — it would
+  // prompt (or fail) for a device that does not exist. The no-camera
+  // state explains instead.
+  if (!(await deviceHasCamera())) { showCamOffState(); return; }
   // Single-flight: overlapping starts share one in-flight request, so
   // the prompt can never fire twice back to back. A waiter whose
   // request was superseded while it was asking (a camera flip stopped
@@ -2290,13 +2422,13 @@ async function startCamera(explicit){
   // preview on the off state.
   while (camStarting) {
     await camStarting;
-    if (camStream) { hide($('cam-off')); camRunning = true; kickCamTick(); return; }
-    if (camDenied || camPerm === 'denied') { camDenied = true; show($('cam-off')); return; }
+    if (camStream) { hideCamOffState(); camRunning = true; kickCamTick(); return; }
+    if (camDenied || camPerm === 'denied') { camDenied = true; showCamOffState(); return; }
   }
   camStarting = openCameraStream(camGen);
   await camStarting;
   camStarting = null;
-  if (camStream) hide($('cam-off')); else show($('cam-off'));
+  if (camStream) hideCamOffState(); else showCamOffState();
 }
 /* Ask for NOTHING but the facing. Every framing request tried so
    far made the preview look zoomed in, because no phone camera
@@ -2325,6 +2457,9 @@ async function openCameraStream(gen){
     // other failure (no camera found, camera busy) just shows the off
     // state this once and leaves the next start free to try again.
     if (e && e.name === 'NotAllowedError') { camDenied = true; setCamPerm('denied'); }
+    // The browser says there is no camera to open: remember it and
+    // strip the camera UI, same as an empty enumerateDevices().
+    if (e && e.name === 'NotFoundError') { camPresent = false; applyCameraAvailability(); }
     return;
   }
   if (gen !== camGen) {
@@ -2639,13 +2774,16 @@ function openEditor(source){
   const cv = $('edit-canvas');
   cv.width = base.width; cv.height = base.height;
   show($('screen-editor'));
-  // The photo keeps its own proportions and is shown as large as the
-  // whole screen allows — the tool bars float over it instead of
-  // squeezing it into the strip left between them.
+  // Full-bleed, Snapchat-style: the photo fills the ENTIRE screen
+  // edge-to-edge — scaled to COVER the stage, so whichever side
+  // overflows is center-cropped by the stage's overflow:hidden and
+  // there are never black bars. The tool bars float over the photo.
+  // All editing math (stroke points, text positions) is proportional
+  // to the wrap, so the cropped overflow changes nothing underneath.
   const stage = $('edit-stage');
   const availW = stage.clientWidth || window.innerWidth;
   const availH = stage.clientHeight || window.innerHeight;
-  const s = Math.min(availW / base.width, availH / base.height);
+  const s = Math.max(availW / base.width, availH / base.height);
   const dispW = Math.max(60, Math.round(base.width * s));
   const dispH = Math.max(60, Math.round(base.height * s));
   cv.style.width = dispW + 'px'; cv.style.height = dispH + 'px';
@@ -2676,12 +2814,12 @@ function openVideoEditor(blob){
     dc.classList.remove('hidden');
     dc.width = W; dc.height = H;
     show($('screen-editor'));
-    // Same as photos: the clip keeps its own proportions, shown as
-    // large as the whole screen allows.
+    // Same as photos: full-bleed COVER — the clip fills the entire
+    // screen edge-to-edge with no black bars, tools floating over it.
     const stage = $('edit-stage');
     const availW = stage.clientWidth || window.innerWidth;
     const availH = stage.clientHeight || window.innerHeight;
-    const s = Math.min(availW / W, availH / H);
+    const s = Math.max(availW / W, availH / H);
     const dispW = Math.max(60, Math.round(W * s));
     const dispH = Math.max(60, Math.round(H * s));
     v.style.width = dispW + 'px'; v.style.height = dispH + 'px';
@@ -3435,9 +3573,15 @@ async function acquireCallStream(wantVideo){
     if (vt && vt.readyState === 'live') sharedVideo = vt;
   }
   if (!sharedVideo) {
+    // Before asking for the camera, check one exists (enumerateDevices
+    // never prompts). A video call on a camera-less device joins with
+    // the microphone only instead of requesting a camera that isn't
+    // there; the other side's video still comes through.
+    let wantCam = wantVideo;
+    if (wantCam && !(await deviceHasCamera())) { wantCam = false; toast('No camera found on this device'); }
     const own = await navigator.mediaDevices.getUserMedia({
       audio: true,
-      video: wantVideo ? { facingMode: 'user' } : false
+      video: wantCam ? { facingMode: 'user' } : false
     });
     own._blipSharedVideo = null;
     return own;
