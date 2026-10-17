@@ -315,7 +315,7 @@ img{display:block}
 
 /* ---------- camera ---------- */
 #cam-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
-.cam-top{position:absolute;top:0;left:0;right:0;padding-top:env(safe-area-inset-top);display:flex;justify-content:space-between;padding-left:14px;padding-right:14px;z-index:4}
+.cam-top{position:absolute;top:0;left:0;right:0;padding-top:calc(12px + env(safe-area-inset-top));display:flex;justify-content:space-between;padding-left:14px;padding-right:14px;z-index:4}
 .cam-top .col{display:flex;flex-direction:column;gap:12px;align-items:center}
 .cam-ctl{width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.38);color:#fff;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);transition:background .15s,transform .1s}
 .cam-ctl:active{transform:scale(.92)}
@@ -438,10 +438,16 @@ img{display:block}
 .react-bar .rc{font-size:11.5px;color:var(--ink2);font-weight:700;margin-left:1px}
 .react-pop{position:absolute;z-index:5;font-size:44px;line-height:1;pointer-events:none;transform:translate(-50%,-50%);animation:reactPop .7s ease-out forwards}
 @keyframes reactPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}25%{opacity:1;transform:translate(-50%,-60%) scale(1.25)}55%{transform:translate(-50%,-66%) scale(1)}100%{opacity:0;transform:translate(-50%,-100%) scale(1.05)}}
-#react-picker{position:absolute;z-index:30;display:flex;gap:2px;background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:6px 8px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-#react-picker button{font-size:25px;line-height:1;padding:5px 6px;border-radius:50%;transition:transform .1s,background .15s}
-#react-picker button:active{transform:scale(1.25)}
-#react-picker button.mine{background:var(--soft);box-shadow:inset 0 0 0 2px var(--chat)}
+#react-picker{position:absolute;z-index:30;display:flex;flex-direction:column;background:var(--sheet);border:1px solid var(--line);border-radius:20px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.25);min-width:198px}
+#react-picker .react-row{display:flex;gap:2px;padding:2px 2px 4px;justify-content:space-between}
+#react-picker .react-row button{font-size:25px;line-height:1;padding:5px 6px;border-radius:50%;transition:transform .1s,background .15s}
+#react-picker .react-row button:active{transform:scale(1.25)}
+#react-picker .react-row button.mine{background:var(--soft);box-shadow:inset 0 0 0 2px var(--chat)}
+.menu-actions{border-top:1px solid var(--line);display:flex;flex-direction:column;padding-top:4px}
+.menu-actions button{display:flex;align-items:center;gap:11px;padding:10px;font-size:15.5px;font-weight:600;border-radius:12px;text-align:left;color:var(--ink)}
+.menu-actions button:active{background:var(--soft)}
+.menu-actions button svg{width:20px;height:20px;flex:none}
+.menu-actions button.danger{color:var(--danger)}
 .thread-input{flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}
 .thread-input .pill{flex:1;display:flex;align-items:center;background:var(--soft);border-radius:999px;padding:4px 6px 4px 16px;gap:6px}
 .thread-input input{flex:1;font-size:16px;padding:8px 0;outline:none;min-width:0}
@@ -505,6 +511,33 @@ img{display:block}
 .chat-custom-row input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
 .chat-custom-row input[type="color"]::-webkit-color-swatch{border:2px solid var(--line);border-radius:50%}
 .chat-custom-row input[type="color"]::-moz-color-swatch{border:2px solid var(--line);border-radius:50%}
+
+/* ---------- replies, edits, groups ---------- */
+#reply-bar{flex:none;display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--line);background:var(--bg)}
+#reply-bar .rb-main{flex:1;min-width:0;display:flex;flex-direction:column}
+#reply-bar .rb-name{font-size:13px;font-weight:800;color:var(--chat)}
+#reply-bar .rb-text{font-size:13.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#reply-bar .rb-x{width:30px;height:30px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none;color:var(--ink2)}
+#reply-bar .rb-x svg{width:14px;height:14px}
+.quote-block{display:flex;flex-direction:column;gap:1px;max-width:100%;text-align:left;background:var(--soft);box-shadow:inset 0 0 0 1px var(--line);border-radius:13px;padding:6px 11px;margin-bottom:4px;cursor:pointer}
+.quote-block b{font-size:12.5px;color:var(--chat);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+.quote-block span{font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+.bubble-row.flash .bubble,.bubble-row.flash .v-bubble,.bubble-row.flash .bubble-media{animation:msgFlash 1s ease}
+@keyframes msgFlash{0%,55%{box-shadow:0 0 0 3px var(--chat)}100%{box-shadow:0 0 0 0 transparent}}
+.sender-name{font-size:12.5px;font-weight:700;color:var(--ink2);margin:0 4px 2px}
+.msg-edit{display:flex;flex-direction:column;gap:8px;min-width:210px}
+.msg-edit-input{background:var(--soft);border-radius:16px;padding:10px 13px;font-size:15.5px;line-height:1.35;outline:none;resize:none;width:100%;color:var(--ink);font-family:inherit}
+.msg-edit-acts{display:flex;gap:8px;justify-content:flex-end}
+.msg-edit-acts button{border-radius:999px;padding:7px 15px;font-weight:800;font-size:13.5px}
+.msg-edit-acts .cancel{background:var(--soft);color:var(--ink2)}
+.msg-edit-acts .save{background:var(--chat);color:#fff}
+.pick-check{width:27px;height:27px;border-radius:50%;border:2px solid var(--line);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;transition:background .12s,border-color .12s}
+.pick-check svg{width:14px;height:14px;opacity:0}
+.pick-check.on{background:var(--chat);border-color:var(--chat)}
+.pick-check.on svg{opacity:1}
+.member-tag{font-size:11.5px;font-weight:800;color:var(--ink3);flex:none}
+.btn-danger-solid{background:var(--danger);color:#fff}
+#story-title{position:absolute;left:18px;right:18px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:3;text-align:center;color:#fff;font-size:20px;font-weight:800;line-height:1.3;text-shadow:0 1px 7px rgba(0,0,0,.7);pointer-events:none}
 
 /* ---------- overlays / sheets ---------- */
 .overlay{position:absolute;inset:0;z-index:40;background:rgba(10,10,14,.45);display:flex;align-items:flex-end;animation:fadeIn .2s}
@@ -690,8 +723,9 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
   .side-item svg{width:25px;height:25px}
   .side-item:hover{background:var(--soft)}
   .side-item.active{background:var(--soft);color:var(--yellow)}
+  #sidebar #side-settings{margin-top:auto}
   .side-me{
-    margin-top:auto;display:flex;align-items:center;gap:11px;width:100%;
+    margin-top:4px;display:flex;align-items:center;gap:11px;width:100%;
     padding:10px;border-radius:14px;text-align:left;transition:background .15s;
   }
   .side-me:hover{background:var(--soft)}
@@ -740,8 +774,8 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
         <button class="side-item" data-side="view-stories"><span data-ico="earth"></span><span>Stories</span></button>
         <button class="side-item" id="side-friends"><span data-ico="addUser"></span><span>Friends</span></button>
         <button class="side-item" id="side-profile"><span data-ico="person"></span><span>Profile</span></button>
-        <button class="side-item" id="side-settings"><span data-ico="gear"></span><span>Settings</span></button>
       </nav>
+      <button class="side-item" id="side-settings"><span data-ico="gear"></span><span>Settings</span></button>
       <button class="side-me" id="side-me" aria-label="Your profile"></button>
     </aside>
 
@@ -750,6 +784,7 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
       <header class="app-head">
         <span id="head-me-chats"></span>
         <div class="title">Chat</div>
+        <button class="head-btn" id="btn-new-group" aria-label="New group"></button>
         <button class="head-btn" id="btn-add-friend" aria-label="Add friend"></button>
       </header>
       <div class="viewpane" id="chats-scroll">
@@ -832,6 +867,7 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
       <button class="head-btn" id="btn-thread-call" aria-label="Call"></button>
     </header>
     <div id="thread-messages"></div>
+    <div id="reply-bar" class="hidden"><div class="rb-main"><span class="rb-name" id="reply-bar-name"></span><span class="rb-text" id="reply-bar-text"></span></div><button type="button" class="rb-x" id="btn-reply-cancel" aria-label="Cancel reply"></button></div>
     <div id="voice-rec-bar" class="hidden"><span class="rec-dot"></span><span class="vr-time" id="voice-rec-time">0:00</span><span class="vr-hint">Recording — release to send</span></div>
     <div id="sticker-panel" class="hidden">
       <div class="sticker-head"><b>Your Stickers</b><button type="button" class="done-btn hidden" id="btn-sticker-done">Done</button></div>
@@ -901,6 +937,8 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
       <div class="set-list" style="margin-top:2px">
         <button class="set-row" id="setg-notif"><span class="lab">Notifications</span><span class="set-val" id="setg-notif-val">Enable Notifications</span><span data-ico="chev"></span></button>
         <button class="set-row" id="setg-update"><span class="lab">Check for Updates</span><span class="set-val" id="setg-update-val"></span><span data-ico="chev"></span></button>
+        <button class="set-row" id="setg-install"><span class="lab">Add to Taskbar</span><span class="set-val" id="setg-install-val">Install Blip</span><span data-ico="chev"></span></button>
+        <button class="set-row" id="setg-camera"><span class="lab">Check for Camera</span><span class="set-val" id="setg-camera-val"></span><span data-ico="chev"></span></button>
         <div class="set-row" style="cursor:default"><span class="lab">Version</span><span class="set-val" id="setg-version"></span></div>
       </div>
       <div class="set-list">
@@ -969,6 +1007,7 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
       <h3>Send To</h3>
       <img id="send-preview" class="send-preview" alt="Your photo">
       <video id="send-preview-video" class="send-preview hidden" playsinline loop muted></video>
+      <input id="send-title" class="field-soft" type="text" placeholder="Story Title (Optional)" maxlength="60" autocomplete="off" style="margin-bottom:10px">
       <div class="scroll" id="send-list"></div>
       <div class="stack">
         <button class="btn-block btn-ink" id="btn-send-story">Post to My Story</button>
@@ -1007,6 +1046,89 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
       </div>
       <div class="stack">
         <button class="btn-block btn-ink" id="btn-chat-theme-done">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ NEW GROUP ============ -->
+  <div id="sheet-new-group" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>New Group</h3>
+      <input id="group-name" class="field-soft" type="text" placeholder="Group Name" maxlength="40" autocomplete="off">
+      <div class="sec-label" style="padding:16px 0 6px">Add Friends</div>
+      <div class="scroll" id="group-friend-list"></div>
+      <p id="group-error" class="error" style="text-align:left"></p>
+      <div class="stack">
+        <button class="btn-block btn-ink" id="btn-group-create">Create Group</button>
+        <button class="btn-block btn-ghost" id="btn-group-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GROUP INFO ============ -->
+  <div id="sheet-group-info" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3 id="group-info-name" style="cursor:pointer" title="Rename group">Group</h3>
+      <p id="group-info-meta" style="text-align:center;color:var(--ink2);font-size:13.5px;margin:-6px 0 4px"></p>
+      <div class="scroll" id="group-member-list"></div>
+      <div class="stack">
+        <button class="btn-block btn-soft" id="btn-group-add">Add Members</button>
+        <button class="btn-block btn-soft" id="btn-group-rename">Rename Group</button>
+        <button class="btn-block btn-ghost" id="btn-group-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADD MEMBERS ============ -->
+  <div id="sheet-add-members" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Add Members</h3>
+      <div class="scroll" id="add-member-list"></div>
+      <div class="stack">
+        <button class="btn-block btn-ink" id="btn-add-members-save">Add</button>
+        <button class="btn-block btn-ghost" id="btn-add-members-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RENAME GROUP ============ -->
+  <div id="sheet-rename-group" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Rename Group</h3>
+      <input id="rename-group-input" class="field-soft" type="text" placeholder="Group Name" maxlength="40" autocomplete="off">
+      <p id="rename-error" class="error" style="text-align:left"></p>
+      <div class="stack">
+        <button class="btn-block btn-ink" id="btn-rename-save">Save</button>
+        <button class="btn-block btn-ghost" id="btn-rename-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CONFIRM ============ -->
+  <div id="sheet-confirm" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3 id="confirm-title">Are you sure?</h3>
+      <p id="confirm-body" style="text-align:center;color:var(--ink2);font-size:14.5px;margin:0 0 4px;line-height:1.45"></p>
+      <div class="stack">
+        <button class="btn-block btn-danger-solid" id="btn-confirm-ok">Delete</button>
+        <button class="btn-block btn-ghost" id="btn-confirm-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ INSTALL HELP ============ -->
+  <div id="sheet-install" class="overlay hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>Add Blip to Your Taskbar</h3>
+      <p id="install-steps" style="text-align:center;color:var(--ink2);font-size:14.5px;margin:0 0 4px;line-height:1.5"></p>
+      <div class="stack">
+        <button class="btn-block btn-ink" id="btn-install-close">Got It</button>
       </div>
     </div>
   </div>
@@ -1105,6 +1227,7 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
         <button class="fs-x" id="btn-story-close" aria-label="Close"></button>
       </div>
     </div>
+    <div id="story-title" class="hidden"></div>
     <div class="fs-bottom hidden" id="story-reply-bar">
       <button class="reply-pill" id="btn-story-reply">Reply to story…</button>
     </div>
@@ -1217,11 +1340,15 @@ const IC = {
   sticker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><circle cx="9.2" cy="10" r=".4" fill="currentColor"/><circle cx="14.8" cy="10" r=".4" fill="currentColor"/><path d="M8.2 14.2a5.4 5.4 0 0 0 7.6 0"/></svg>',
   playTri:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 5.4v13.2c0 .9 1 1.5 1.8 1L19 13a1.2 1.2 0 0 0 0-2L10.3 4.4c-.8-.5-1.8.1-1.8 1Z"/></svg>',
   pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.4" y="5" width="3.8" height="14" rx="1.4"/><rect x="13.8" y="5" width="3.8" height="14" rx="1.4"/></svg>',
-  palette:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6a8.4 8.4 0 1 0 0 16.8c1.2 0 1.7-.8 1.7-1.6 0-.9-.7-1.4-.7-2.3 0-.8.7-1.4 1.6-1.4h1.7a4.2 4.2 0 0 0 4.1-4.5C20.2 6.7 16.5 3.6 12 3.6Z"/><circle cx="7.6" cy="10.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="6.9" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.1" fill="currentColor" stroke="none"/></svg>'
+  palette:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6a8.4 8.4 0 1 0 0 16.8c1.2 0 1.7-.8 1.7-1.6 0-.9-.7-1.4-.7-2.3 0-.8.7-1.4 1.6-1.4h1.7a4.2 4.2 0 0 0 4.1-4.5C20.2 6.7 16.5 3.6 12 3.6Z"/><circle cx="7.6" cy="10.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="6.9" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  reply:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5.2l4 4-4 4"/><path d="M18.8 9.2H9a5.3 5.3 0 0 0 0 10.6h3.6"/></svg>',
+  group:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.4" r="3.5"/><path d="M2.9 19.5c.7-3.1 3-4.7 6.1-4.7s5.4 1.6 6.1 4.7"/><path d="M15.6 5.3a3.5 3.5 0 0 1 0 6.3M17.9 15.2c1.9.6 3 2 3.5 4.1"/></svg>',
+  download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8v10.7M7.4 10.4 12 15l4.6-4.6"/><path d="M4.5 19.8h15"/></svg>'
 };
 function setIco(el, name){ if (el) el.innerHTML = IC[name] || ''; }
 document.querySelectorAll('[data-ico]').forEach(el => setIco(el, el.dataset.ico));
 setIco($('btn-add-friend'), 'addUser'); setIco($('btn-add-friend2'), 'addUser');
+setIco($('btn-new-group'), 'group'); setIco($('btn-reply-cancel'), 'x');
 setIco($('btn-thread-back'), 'chevL'); setIco($('btn-profile-back'), 'chevL');
 setIco($('btn-friends-back'), 'chevL'); setIco($('btn-user-back'), 'chevL');
 setIco($('btn-open-settings'), 'gear'); setIco($('btn-settings-back'), 'chevL');
@@ -1238,6 +1365,15 @@ let me = null;
 let authMode = 'signup';
 let activeView = 'view-chats';
 let threadOther = null;
+let threadGroup = null;      // open group chat ({...blip_groups row, members:[userId]}) or null
+let myGroups = [];           // groups I belong to, each with .members = [userId]
+let groupMembersCache = {};  // groupId -> [userId]
+let msgById = {};            // messageId -> message row (reply-quote lookups)
+let replyTo = null;          // message the composer is currently replying to
+let editingMid = null;       // message id being edited inline right now
+let photoReturnGroup = null; // group to reopen after the photo viewer
+let friendAddSuppress = {};  // userId -> ts of my own addFriend (its echo is not a "request")
+let confirmCb = null;        // pending action behind the confirm sheet
 let profilesCache = {};
 let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
 let chatThemes = {};         // otherId -> theme id, or 'custom:#rrggbb' (per-chat themes)
@@ -1344,7 +1480,7 @@ async function init(){
   // actually present. enumerateDevices() never prompts.
   await detectCameraPresence();
   wireAuth(); wireNav(); wireProfile(); wireSettings(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor(); wireCropper();
-  wireVoice(); wireStickers(); wireChatTheme();
+  wireVoice(); wireStickers(); wireChatTheme(); wireGroups(); wireInstall();
   // The service worker asks us to re-subscribe when the push service rotates
   // our subscription ('pushsubscriptionchange').
   if ('serviceWorker' in navigator) {
@@ -1475,8 +1611,10 @@ async function enterApp(user){
   // and the "Camera Is Off" state only appears after a refusal there.
   switchView('view-chats');
   loadFriends();
+  await loadMyGroups();
   loadChats(); loadStories();
   subscribeRealtime();
+  subscribeSocial();
   subscribeCallInbox();
   refreshPushSubscription();
 }
@@ -1562,6 +1700,7 @@ function wireSettings(){
   $('setg-friends').onclick = () => { hide($('screen-settings')); openFriends(); };
   $('setg-notif').onclick = () => enableNotifications();
   $('setg-update').onclick = () => manualCheckForUpdate();
+  $('setg-camera').onclick = () => recheckCamera();
   $('setg-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 }
 function openSettings(){
@@ -1572,6 +1711,8 @@ function openSettings(){
   $('setg-version').textContent = BLIP_VERSION;
   updateNotifRow();
   syncUpdateRow();
+  syncInstallRow();
+  syncCameraRow();
   renderThemeGrid();
   show($('screen-settings'));
 }
@@ -1927,6 +2068,7 @@ async function addFriend(p){
   if (error) { toast('Could not add friend: ' + error.message); return false; }
   friendIds.add(p.id);
   profilesCache[p.id] = p;
+  friendAddSuppress[p.id] = Date.now();
   toast('Added ' + (p.display_name || 'Friend'));
   return true;
 }
@@ -2040,7 +2182,9 @@ async function getThreads(){
   if (error || !data) return [];
   const seen = new Map();
   for (const m of data) {
+    if (m.group_id) continue; // group messages never form a 1:1 thread
     const otherId = m.sender_id === me.id ? m.receiver_id : m.sender_id;
+    if (!otherId) continue;
     if (!seen.has(otherId)) seen.set(otherId, m);
   }
   const ids = [...seen.keys()];
@@ -2076,27 +2220,273 @@ function statusFor(m, otherId){
 async function loadChats(){
   const list = $('chat-list');
   const threads = await getThreads();
+  // Latest message per group I belong to, so groups sort into the
+  // same list as 1:1 chats by recency.
+  const groupLast = {};
+  if (myGroups.length) {
+    const { data } = await sb.from('blip_messages').select('*')
+      .in('group_id', myGroups.map(g => g.id))
+      .order('created_at', { ascending: false }).limit(300);
+    (data || []).forEach(m => { if (!groupLast[m.group_id]) groupLast[m.group_id] = m; });
+    if (data && data.length) await fetchProfiles([...new Set(data.map(m => m.sender_id))]);
+  }
+  const items = [];
+  threads.forEach(t => items.push({ kind: 'dm', at: t.last.created_at, other: t.other, last: t.last }));
+  myGroups.forEach(g => {
+    const last = groupLast[g.id] || null;
+    items.push({ kind: 'group', at: last ? last.created_at : (g.created_at || ''), group: g, last });
+  });
+  items.sort((a, b) => String(b.at).localeCompare(String(a.at)));
   list.innerHTML = '';
-  $('chats-empty').classList.toggle('hidden', threads.length > 0);
-  threads.forEach(t => {
-    const m = t.last, st = statusFor(m, t.other.id);
-    const snippet = m.image_url ? (isVoiceUrl(m.image_url) ? ' · Voice Message' : '') : ' · ' + esc((m.body || '').slice(0, 42));
+  $('chats-empty').classList.toggle('hidden', items.length > 0);
+  items.forEach(it => {
     const r = document.createElement('div');
     r.className = 'chat-row';
-    r.innerHTML = '<span class="chat-av">' + avatarHTML(t.other, 'md') + '</span>' +
-      '<div class="row-main"><div class="row-name' + (st.unread ? ' unread' : '') + '">' + esc(t.other.display_name) + '</div>' +
-      '<div class="row-status"><span class="dot" style="background:' + st.dot + '"></span><span class="' + st.cls + '">' + st.label + '</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500">' + snippet + '</span></div></div>' +
-      (st.unread ? '<span class="unread-dot"></span>' : '');
-    r.querySelector('.chat-av').onclick = (e) => { e.stopPropagation(); openUserProfile(t.other); };
-    r.onclick = () => openThread(t.other);
+    if (it.kind === 'dm') {
+      const t = { other: it.other, last: it.last };
+      const m = t.last, st = statusFor(m, t.other.id);
+      const snippet = m.image_url ? (isVoiceUrl(m.image_url) ? ' · Voice Message' : '') : ' · ' + esc((m.body || '').slice(0, 42));
+      r.innerHTML = '<span class="chat-av">' + avatarHTML(t.other, 'md') + '</span>' +
+        '<div class="row-main"><div class="row-name' + (st.unread ? ' unread' : '') + '">' + esc(t.other.display_name) + '</div>' +
+        '<div class="row-status"><span class="dot" style="background:' + st.dot + '"></span><span class="' + st.cls + '">' + st.label + '</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500">' + snippet + '</span></div></div>' +
+        (st.unread ? '<span class="unread-dot"></span>' : '');
+      r.querySelector('.chat-av').onclick = (e) => { e.stopPropagation(); openUserProfile(t.other); };
+      r.onclick = () => openThread(t.other);
+    } else {
+      const g = it.group, m = it.last;
+      const cnt = (g.members || []).length;
+      let unread = false, statusHTML;
+      if (m) {
+        const opened = openedMap['g:' + g.id];
+        unread = m.sender_id !== me.id && (!opened || new Date(m.created_at) > new Date(opened));
+        const sp = profilesCache[m.sender_id];
+        const who = m.sender_id === me.id ? 'You' : ((sp && sp.display_name) || 'Member');
+        const snip = m.image_url ? (isVoiceUrl(m.image_url) ? 'Voice Message' : 'Photo') : esc((m.body || '').slice(0, 34));
+        statusHTML = '<span class="dot" style="background:var(--chat)"></span><span class="st-chat">' + cnt + ' Members</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500"> · ' + esc(who) + ': ' + snip + '</span>';
+      } else {
+        statusHTML = '<span class="dot" style="background:#c6ccd4"></span><span class="st-plain">' + cnt + ' Members</span><span class="sep">·</span><span class="st-dim">New Group</span>';
+      }
+      r.innerHTML = '<span class="chat-av">' + groupAvatarHTML(g, 'md') + '</span>' +
+        '<div class="row-main"><div class="row-name' + (unread ? ' unread' : '') + '">' + esc(g.name) + '</div>' +
+        '<div class="row-status">' + statusHTML + '</div></div>' +
+        (unread ? '<span class="unread-dot"></span>' : '');
+      r.querySelector('.chat-av').onclick = (e) => { e.stopPropagation(); openGroupThread(g); };
+      r.onclick = () => openGroupThread(g);
+    }
     list.appendChild(r);
   });
+}
+
+/* ---------- groups ----------
+   Group chats live in blip_groups + blip_group_members; their
+   messages are blip_messages rows with group_id set (receiver_id
+   null). A group object here is the blip_groups row plus .members,
+   the member user ids, kept fresh by loadMyGroups(). */
+function groupAvatarHTML(g, cls){
+  const name = (g && g.name) || 'Group';
+  const initials = name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'G';
+  return '<div class="avatar ' + (cls || 'md') + '" style="background:' + avColor(g && g.id) + '">' + esc(initials) + '</div>';
+}
+async function loadMyGroups(){
+  myGroups = [];
+  groupMembersCache = {};
+  if (!sb || !me) return;
+  const { data: mine, error } = await sb.from('blip_group_members').select('group_id').eq('user_id', me.id);
+  if (error || !mine || !mine.length) return;
+  const ids = [...new Set(mine.map(r => r.group_id))];
+  const { data: gs } = await sb.from('blip_groups').select('*').in('id', ids);
+  const { data: mem } = await sb.from('blip_group_members').select('group_id,user_id').in('group_id', ids);
+  (mem || []).forEach(r => { (groupMembersCache[r.group_id] = groupMembersCache[r.group_id] || []).push(r.user_id); });
+  if (mem && mem.length) await fetchProfiles([...new Set(mem.map(r => r.user_id))]);
+  myGroups = (gs || []).map(g => ({ ...g, members: groupMembersCache[g.id] || [] }));
+}
+async function openGroupThread(g){
+  threadOther = null;
+  threadGroup = g;
+  editingMid = null;
+  setReplyTo(null);
+  // Calls are 1:1 — the group thread hides those buttons.
+  $('btn-thread-call').classList.add('hidden');
+  $('btn-thread-video').classList.add('hidden');
+  applyChatTheme('g:' + g.id);
+  markOpened('g:' + g.id);
+  clearChatNotifications(g.id);
+  refreshGroupHeader();
+  $('thread-avatar').innerHTML = groupAvatarHTML(g, 'sm');
+  $('thread-messages').innerHTML = '';
+  show($('screen-thread')); hide($('screen-main'));
+  await loadThreadMessages();
+  const box = $('thread-messages');
+  box.scrollTop = box.scrollHeight;
+}
+function refreshGroupHeader(){
+  if (!threadGroup) return;
+  $('thread-name').textContent = threadGroup.name || 'Group';
+  const n = (threadGroup.members || []).length;
+  $('thread-user').textContent = n + (n === 1 ? ' member' : ' members');
+}
+function wireGroups(){
+  $('btn-new-group').onclick = openNewGroup;
+  $('btn-group-cancel').onclick = () => hide($('sheet-new-group'));
+  $('sheet-new-group').addEventListener('click', (e) => { if (e.target === $('sheet-new-group')) hide($('sheet-new-group')); });
+  $('btn-group-create').onclick = createGroup;
+  $('group-name').addEventListener('input', syncCreateGroupBtn);
+  $('btn-group-close').onclick = () => hide($('sheet-group-info'));
+  $('sheet-group-info').addEventListener('click', (e) => { if (e.target === $('sheet-group-info')) hide($('sheet-group-info')); });
+  $('group-info-name').onclick = () => { hide($('sheet-group-info')); openRenameGroup(); };
+  $('btn-group-rename').onclick = () => { hide($('sheet-group-info')); openRenameGroup(); };
+  $('btn-group-add').onclick = () => { hide($('sheet-group-info')); openAddMembers(); };
+  $('btn-add-members-cancel').onclick = () => hide($('sheet-add-members'));
+  $('sheet-add-members').addEventListener('click', (e) => { if (e.target === $('sheet-add-members')) hide($('sheet-add-members')); });
+  $('btn-add-members-save').onclick = saveAddMembers;
+  $('btn-rename-cancel').onclick = () => hide($('sheet-rename-group'));
+  $('sheet-rename-group').addEventListener('click', (e) => { if (e.target === $('sheet-rename-group')) hide($('sheet-rename-group')); });
+  $('btn-rename-save').onclick = saveRenameGroup;
+  $('btn-reply-cancel').onclick = () => setReplyTo(null);
+  $('btn-confirm-cancel').onclick = () => { confirmCb = null; hide($('sheet-confirm')); };
+  $('btn-confirm-ok').onclick = () => { const cb = confirmCb; confirmCb = null; hide($('sheet-confirm')); if (cb) cb(); };
+  $('sheet-confirm').addEventListener('click', (e) => { if (e.target === $('sheet-confirm')) { confirmCb = null; hide($('sheet-confirm')); } });
+}
+/* Friend checklist shared by the create-group and add-members
+   sheets: tap a row to toggle the person in or out of sel. */
+function renderPickList(box, sel, exclude, onChange){
+  box.innerHTML = '';
+  const friends = [...friendIds].map(id => profilesCache[id]).filter(Boolean)
+    .filter(p => !exclude || !exclude.has(p.id))
+    .sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || '')));
+  if (!friends.length) {
+    box.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">' +
+      (exclude ? 'All your friends are already in this group.' : 'No friends yet — add friends first, then make a group with them.') + '</p>';
+    return;
+  }
+  friends.forEach(p => {
+    const r = document.createElement('div');
+    r.className = 'pick-row';
+    r.innerHTML = avatarHTML(p, 'sm') + '<div class="row-main"><b>' + esc(p.display_name) + '</b><span>@' + esc(p.username) + '</span></div>' +
+      '<span class="pick-check' + (sel.has(p.id) ? ' on' : '') + '">' + IC.check + '</span>';
+    r.onclick = () => {
+      if (sel.has(p.id)) sel.delete(p.id); else sel.add(p.id);
+      r.querySelector('.pick-check').classList.toggle('on', sel.has(p.id));
+      if (onChange) onChange();
+    };
+    box.appendChild(r);
+  });
+}
+let newGroupSel = new Set();
+async function openNewGroup(){
+  newGroupSel = new Set();
+  $('group-name').value = '';
+  $('group-error').textContent = '';
+  await loadFriends();
+  renderPickList($('group-friend-list'), newGroupSel, null, syncCreateGroupBtn);
+  syncCreateGroupBtn();
+  show($('sheet-new-group'));
+}
+function syncCreateGroupBtn(){
+  const b = $('btn-group-create');
+  if (!b) return;
+  const ready = !!($('group-name').value.trim() && newGroupSel.size);
+  b.disabled = !ready;
+  b.style.opacity = ready ? '1' : '.5';
+}
+async function createGroup(){
+  const name = $('group-name').value.trim();
+  if (!name) { $('group-error').textContent = 'Give your group a name.'; return; }
+  if (!newGroupSel.size) { $('group-error').textContent = 'Pick at least one friend to add.'; return; }
+  const btn = $('btn-group-create');
+  btn.disabled = true;
+  let res = await sb.from('blip_groups').insert({ name, created_by: me.id }).select().single();
+  if (res.error) res = await sb.from('blip_groups').insert({ name }).select().single();
+  if (res.error) {
+    $('group-error').textContent = 'Could not create group: ' + res.error.message;
+    btn.disabled = false;
+    return;
+  }
+  const g = res.data;
+  const rows = [{ group_id: g.id, user_id: me.id }].concat([...newGroupSel].map(id => ({ group_id: g.id, user_id: id })));
+  const { error: mErr } = await sb.from('blip_group_members').insert(rows);
+  btn.disabled = false;
+  hide($('sheet-new-group'));
+  if (mErr) { toast('Group created, but members could not be added'); return; }
+  await loadMyGroups();
+  const full = myGroups.find(x => x.id === g.id) || { ...g, members: [me.id, ...newGroupSel] };
+  toast('Group Created');
+  openGroupThread(full);
+}
+/* Group info: name (tap to rename), the member list, and adding
+   more members — opened by tapping the group header in its thread. */
+function openGroupInfo(){
+  if (!threadGroup) return;
+  renderGroupInfo();
+  show($('sheet-group-info'));
+}
+function renderGroupInfo(){
+  const g = threadGroup;
+  if (!g) return;
+  $('group-info-name').textContent = g.name || 'Group';
+  const mem = g.members || [];
+  $('group-info-meta').textContent = mem.length + (mem.length === 1 ? ' member' : ' members') + ' · Tap the name to rename';
+  const list = $('group-member-list');
+  list.innerHTML = '';
+  mem.forEach(id => {
+    const p = profilesCache[id];
+    if (!p) return;
+    const r = personRow(p);
+    if (id === me.id) {
+      const tag = document.createElement('span');
+      tag.className = 'member-tag'; tag.textContent = 'You';
+      r.appendChild(tag);
+    }
+    list.appendChild(r);
+  });
+}
+let addMemberSel = new Set();
+async function openAddMembers(){
+  if (!threadGroup) return;
+  addMemberSel = new Set();
+  await loadFriends();
+  renderPickList($('add-member-list'), addMemberSel, new Set(threadGroup.members || []), null);
+  show($('sheet-add-members'));
+}
+async function saveAddMembers(){
+  if (!threadGroup) return;
+  if (!addMemberSel.size) { hide($('sheet-add-members')); return; }
+  const gid = threadGroup.id;
+  const rows = [...addMemberSel].map(id => ({ group_id: gid, user_id: id }));
+  const { error } = await sb.from('blip_group_members').insert(rows);
+  if (error) { toast('Could not add members: ' + error.message); return; }
+  hide($('sheet-add-members'));
+  await loadMyGroups();
+  const g = myGroups.find(x => x.id === gid);
+  if (g) threadGroup = g;
+  refreshGroupHeader();
+  toast('Members Added');
+  openGroupInfo();
+}
+function openRenameGroup(){
+  if (!threadGroup) return;
+  $('rename-group-input').value = threadGroup.name || '';
+  $('rename-error').textContent = '';
+  show($('sheet-rename-group'));
+  setTimeout(() => $('rename-group-input').focus(), 60);
+}
+async function saveRenameGroup(){
+  const name = $('rename-group-input').value.trim();
+  if (!threadGroup || !name) return;
+  const { error } = await sb.from('blip_groups').update({ name }).eq('id', threadGroup.id);
+  if (error) { $('rename-error').textContent = error.message; return; }
+  threadGroup.name = name;
+  const g = myGroups.find(x => x.id === threadGroup.id);
+  if (g) g.name = name;
+  refreshGroupHeader();
+  hide($('sheet-rename-group'));
+  toast('Group Renamed');
 }
 
 /* ---------- thread ---------- */
 function wireChat(){
   $('btn-thread-back').onclick = closeThread;
-  $('thread-who').onclick = () => { if (threadOther) openThreadMenu(); };
+  $('thread-who').onclick = () => { if (threadGroup) openGroupInfo(); else if (threadOther) openThreadMenu(); };
   $('btn-menu-profile').onclick = () => { hide($('sheet-thread-menu')); if (threadOther) openUserProfile(threadOther); };
   $('btn-menu-theme').onclick = () => { hide($('sheet-thread-menu')); if (threadOther) openChatTheme(threadOther); };
   $('btn-menu-cancel').onclick = () => hide($('sheet-thread-menu'));
@@ -2112,9 +2502,12 @@ function wireChat(){
   $('thread-form').onsubmit = async (e) => {
     e.preventDefault();
     const t = $('thread-text').value.trim();
-    if (!t || !threadOther) return;
+    if (!t || (!threadOther && !threadGroup)) return;
     $('thread-text').value = '';
-    await sendMessage(threadOther.id, t, null);
+    const rt = replyTo;
+    setReplyTo(null);
+    if (threadGroup) await sendGroupMessage(threadGroup.id, t, null, rt ? rt.id : null, rt);
+    else await sendMessage(threadOther.id, t, null, rt ? rt.id : null, rt);
   };
 }
 function openThreadMenu(){
@@ -2128,11 +2521,19 @@ function closeThread(){
   closeStickerPanel();
   clearChatThemeVars();
   threadOther = null;
+  threadGroup = null;
+  editingMid = null;
+  setReplyTo(null);
   hide($('screen-thread')); show($('screen-main'));
   loadChats();
 }
 async function openThread(other){
   threadOther = other;
+  threadGroup = null;
+  editingMid = null;
+  setReplyTo(null);
+  $('btn-thread-call').classList.remove('hidden');
+  $('btn-thread-video').classList.remove('hidden');
   applyChatTheme(other.id);
   markOpened(other.id);
   clearChatNotifications(other.id);
@@ -2146,12 +2547,32 @@ async function openThread(other){
   box.scrollTop = box.scrollHeight;
 }
 async function loadThreadMessages(){
-  const { data } = await sb.from('blip_messages').select('*')
-    .or('and(sender_id.eq.' + me.id + ',receiver_id.eq.' + threadOther.id + '),and(sender_id.eq.' + threadOther.id + ',receiver_id.eq.' + me.id + ')')
-    .order('created_at', { ascending: true }).limit(500);
+  let data;
+  if (threadGroup) {
+    const res = await sb.from('blip_messages').select('*')
+      .eq('group_id', threadGroup.id)
+      .order('created_at', { ascending: true }).limit(500);
+    data = res.data;
+    if (data && data.length) await fetchProfiles([...new Set(data.map(m => m.sender_id))]);
+  } else {
+    const res = await sb.from('blip_messages').select('*')
+      .or('and(sender_id.eq.' + me.id + ',receiver_id.eq.' + threadOther.id + '),and(sender_id.eq.' + threadOther.id + ',receiver_id.eq.' + me.id + ')')
+      .order('created_at', { ascending: true }).limit(500);
+    data = res.data;
+  }
+  const rows = data || [];
+  rows.forEach(m => { msgById[m.id] = m; });
+  // Reply quotes need the original message even when it sits outside
+  // the loaded window — fetch any targets we don't already hold.
+  const missing = [...new Set(rows.filter(m => m.reply_to_message_id && !msgById[m.reply_to_message_id]).map(m => m.reply_to_message_id))];
+  if (missing.length) {
+    const { data: tg } = await sb.from('blip_messages').select('*').in('id', missing);
+    (tg || []).forEach(t => { msgById[t.id] = t; });
+    if (tg && tg.length) await fetchProfiles([...new Set(tg.map(t => t.sender_id))]);
+  }
   const box = $('thread-messages'); box.innerHTML = '';
   let lastDay = '', lastSender = null;
-  (data || []).forEach(m => {
+  rows.forEach(m => {
     const day = new Date(m.created_at).toDateString();
     if (day !== lastDay) {
       const sep = document.createElement('div');
@@ -2162,13 +2583,37 @@ async function loadThreadMessages(){
     box.appendChild(bubble(m, m.sender_id !== lastSender));
     lastSender = m.sender_id;
   });
-  loadReactionsFor((data || []).map(x => x.id));
+  loadReactionsFor(rows.map(x => x.id));
 }
 function bubble(m, gap){
   const mine = m.sender_id === me.id;
   const row = document.createElement('div');
   row.className = 'bubble-row ' + (mine ? 'me' : 'them') + (gap ? ' gap' : '');
   row.dataset.mid = m.id;
+  // In a group, other people's messages carry their name so the
+  // thread stays readable with more than two people in it.
+  if (threadGroup && !mine) {
+    const sp = profilesCache[m.sender_id];
+    const nm = document.createElement('div');
+    nm.className = 'sender-name';
+    nm.textContent = (sp && sp.display_name) || 'Member';
+    row.appendChild(nm);
+  }
+  // A reply shows the message it answers as a small quote on top;
+  // tapping the quote jumps to the original when it's on screen.
+  if (m.reply_to_message_id) {
+    const t = m._reply || msgById[m.reply_to_message_id];
+    const tp = t ? profilesCache[t.sender_id] : null;
+    const q = document.createElement('button');
+    q.type = 'button'; q.className = 'quote-block';
+    q.innerHTML = '<b>' + esc(t ? ((tp && tp.display_name) || 'Message') : 'Message') + '</b><span>' +
+      esc(t ? msgSnippet(t) : 'Original message was deleted') + '</span>';
+    q.onclick = () => {
+      const el = document.querySelector('[data-mid="' + m.reply_to_message_id + '"]');
+      if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1000); }
+    };
+    row.appendChild(q);
+  }
   if (isVoiceUrl(m.image_url)) {
     row.appendChild(voiceBubble(m, mine));
   } else if (m.image_url) {
@@ -2189,9 +2634,12 @@ function bubble(m, gap){
       badge.innerHTML = '<i>' + IC.play + '</i>';
       holder.appendChild(badge);
     }
-    wireMessageGestures(holder, m, () => vid
-      ? openVideoMessage(m, mine ? me : (profilesCache[m.sender_id] || threadOther))
-      : openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther)));
+    wireMessageGestures(holder, m, () => {
+      photoReturnGroup = threadGroup;
+      return vid
+        ? openVideoMessage(m, mine ? me : (profilesCache[m.sender_id] || threadOther))
+        : openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
+    });
     row.appendChild(holder);
   }
   if (m.body) {
@@ -2205,25 +2653,153 @@ function bubble(m, gap){
   row.appendChild(rb);
   renderReactions(row, m.id);
   const t = document.createElement('div');
-  t.className = 'btime'; t.textContent = fullTime(m.created_at);
+  t.className = 'btime'; t.textContent = fullTime(m.created_at) + (m.edited_at ? ' · edited' : '');
   row.appendChild(t);
   return row;
 }
-async function sendMessage(receiverId, body, imageUrl){
+/* One-line description of a message, used by reply quotes, the
+   reply bar, and desktop notifications. */
+function msgSnippet(m){
+  if (!m) return 'Message';
+  if (m.body) return m.body;
+  if (m.image_url) {
+    if (isVoiceUrl(m.image_url)) return 'Voice message';
+    if (isVideoUrl(m.image_url)) return 'Video';
+    return 'Photo';
+  }
+  return 'Message';
+}
+/* The composer reply state: setReplyTo(m) quotes m above the input
+   until the next send (or the X is tapped). */
+function setReplyTo(m){
+  replyTo = m || null;
+  if (!m) { hide($('reply-bar')); return; }
+  const p = profilesCache[m.sender_id];
+  $('reply-bar-name').textContent = 'Replying to ' + ((p && p.display_name) || 'Message');
+  $('reply-bar-text').textContent = msgSnippet(m);
+  show($('reply-bar'));
+}
+function rerenderRow(m){
+  const row = document.querySelector('[data-mid="' + m.id + '"]');
+  if (!row) return;
+  row.replaceWith(bubble(m, row.classList.contains('gap')));
+}
+/* A reply arrived whose original we don't hold (outside the loaded
+   window): fetch just that message, then repaint the reply so its
+   quote fills in. */
+async function patchReplyQuote(m){
+  if (!m || !m.reply_to_message_id || msgById[m.reply_to_message_id]) return;
+  const { data } = await sb.from('blip_messages').select('*').eq('id', m.reply_to_message_id).single();
+  if (!data) return;
+  msgById[data.id] = data;
+  await fetchProfiles([data.sender_id]);
+  rerenderRow(m);
+}
+async function sendMessage(receiverId, body, imageUrl, replyId, replyTarget){
   const temp = {
-    id: 'tmp-' + Date.now(), sender_id: me.id, receiver_id: receiverId,
-    body: body || null, image_url: imageUrl || null, created_at: new Date().toISOString()
+    id: 'tmp-' + Date.now(), sender_id: me.id, receiver_id: receiverId, group_id: null,
+    body: body || null, image_url: imageUrl || null,
+    reply_to_message_id: replyId || null, edited_at: null,
+    created_at: new Date().toISOString(),
+    _reply: replyTarget || (replyId ? msgById[replyId] : undefined)
   };
-  if (threadOther && threadOther.id === receiverId) {
+  if (threadOther && !threadGroup && threadOther.id === receiverId) {
     $('thread-messages').appendChild(bubble(temp, true));
     $('thread-messages').scrollTop = $('thread-messages').scrollHeight;
   }
   const { data, error } = await sb.from('blip_messages')
-    .insert({ sender_id: me.id, receiver_id: receiverId, body: body || null, image_url: imageUrl || null })
+    .insert({ sender_id: me.id, receiver_id: receiverId, body: body || null, image_url: imageUrl || null, reply_to_message_id: replyId || null })
     .select().single();
   if (error) { toast('Could not send: ' + error.message); return; }
+  if (replyTarget) data._reply = replyTarget;
+  msgById[data.id] = data;
   const tmpEl = document.querySelector('[data-mid="' + temp.id + '"]');
   if (tmpEl) tmpEl.dataset.mid = data.id;
+}
+async function sendGroupMessage(groupId, body, imageUrl, replyId, replyTarget){
+  const temp = {
+    id: 'tmp-' + Date.now(), sender_id: me.id, receiver_id: null, group_id: groupId,
+    body: body || null, image_url: imageUrl || null,
+    reply_to_message_id: replyId || null, edited_at: null,
+    created_at: new Date().toISOString(),
+    _reply: replyTarget || (replyId ? msgById[replyId] : undefined)
+  };
+  if (threadGroup && threadGroup.id === groupId) {
+    $('thread-messages').appendChild(bubble(temp, true));
+    $('thread-messages').scrollTop = $('thread-messages').scrollHeight;
+  }
+  const { data, error } = await sb.from('blip_messages')
+    .insert({ sender_id: me.id, receiver_id: null, group_id: groupId, body: body || null, image_url: imageUrl || null, reply_to_message_id: replyId || null })
+    .select().single();
+  if (error) { toast('Could not send: ' + error.message); return; }
+  if (replyTarget) data._reply = replyTarget;
+  msgById[data.id] = data;
+  const tmpEl = document.querySelector('[data-mid="' + temp.id + '"]');
+  if (tmpEl) tmpEl.dataset.mid = data.id;
+}
+/* Voice notes and stickers send into whichever thread is open. */
+async function sendThreadMedia(imageUrl){
+  setReplyTo(null);
+  if (threadGroup) return sendGroupMessage(threadGroup.id, null, imageUrl, null, null);
+  if (threadOther) return sendMessage(threadOther.id, null, imageUrl, null, null);
+}
+/* ---------- message edit & delete ---------- */
+function askConfirm(title, body, okLabel, cb){
+  $('confirm-title').textContent = title;
+  $('confirm-body').textContent = body;
+  $('btn-confirm-ok').textContent = okLabel;
+  confirmCb = cb;
+  show($('sheet-confirm'));
+}
+/* Inline editing: the bubble is swapped for a small editor with the
+   current text; saving writes body + edited_at to blip_messages and
+   the repainted bubble gains its "edited" marker from edited_at. */
+function startEditMessage(m){
+  const row = document.querySelector('[data-mid="' + m.id + '"]');
+  if (!row) return;
+  const b = row.querySelector('.bubble');
+  if (!b) return;
+  editingMid = m.id;
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-edit';
+  const ta = document.createElement('textarea');
+  ta.className = 'msg-edit-input';
+  ta.value = m.body || '';
+  ta.maxLength = 500;
+  ta.rows = 2;
+  const acts = document.createElement('div');
+  acts.className = 'msg-edit-acts';
+  const cancel = document.createElement('button');
+  cancel.type = 'button'; cancel.className = 'cancel'; cancel.textContent = 'Cancel';
+  cancel.onclick = () => { editingMid = null; rerenderRow(m); };
+  const save = document.createElement('button');
+  save.type = 'button'; save.className = 'save'; save.textContent = 'Save';
+  save.onclick = async () => {
+    const v = ta.value.trim();
+    if (!v) { toast('Message cannot be empty'); return; }
+    save.disabled = true;
+    const stamp = new Date().toISOString();
+    const { error } = await sb.from('blip_messages')
+      .update({ body: v, edited_at: stamp }).eq('id', m.id).eq('sender_id', me.id);
+    if (error) { toast('Could not edit: ' + error.message); save.disabled = false; return; }
+    m.body = v; m.edited_at = stamp;
+    editingMid = null;
+    rerenderRow(m);
+  };
+  acts.appendChild(cancel); acts.appendChild(save);
+  wrap.appendChild(ta); wrap.appendChild(acts);
+  b.replaceWith(wrap);
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+async function deleteMessage(m){
+  const { error } = await sb.from('blip_messages').delete().eq('id', m.id).eq('sender_id', me.id);
+  if (error) { toast('Could not delete: ' + error.message); return; }
+  delete msgById[m.id];
+  const row = document.querySelector('[data-mid="' + m.id + '"]');
+  if (row) row.remove();
+  if (replyTo && replyTo.id === m.id) setReplyTo(null);
+  toast('Message Deleted');
 }
 
 /* ---------- voice messages ----------
@@ -2310,7 +2886,7 @@ function wireVoice(){
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 async function startVoiceRecording(){
-  if (voiceRec || !threadOther) return;
+  if (voiceRec || (!threadOther && !threadGroup)) return;
   if (typeof MediaRecorder === 'undefined') { toast('Voice messages are not supported on this device'); return; }
   const rec = { mr: null, chunks: [], mime: '', stream: null, startedAt: 0, timer: null, discard: false, stopWanted: false };
   voiceRec = rec;
@@ -2368,9 +2944,9 @@ async function finishVoiceRecording(rec){
   if (rec.discard) return;
   const blob = new Blob(chunks, { type });
   if (!chunks.length || dur < 0.7 || !blob.size) { toast('Hold the mic to record a voice message'); return; }
-  if (!threadOther) return;
+  if (!threadOther && !threadGroup) return;
   const url = await uploadVoice(blob);
-  if (url) await sendMessage(threadOther.id, null, url + VOICE_MARK);
+  if (url) await sendThreadMedia(url + VOICE_MARK);
 }
 async function uploadVoice(blob){
   const type = (blob.type || 'audio/mp4').split(';')[0];
@@ -2591,9 +3167,9 @@ function renderStickerGrid(){
   }
 }
 async function sendSticker(st){
-  if (!threadOther || !st) return;
+  if ((!threadOther && !threadGroup) || !st) return;
   closeStickerPanel();
-  await sendMessage(threadOther.id, null, st.url);
+  await sendThreadMedia(st.url);
 }
 async function deleteSticker(st){
   const { error } = await sb.storage.from('blip-media').remove([st.path]);
@@ -2733,6 +3309,8 @@ function openReactPicker(m, anchorEl){
   pickerFor = m;
   const pk = $('react-picker');
   pk.innerHTML = '';
+  const reactRow = document.createElement('div');
+  reactRow.className = 'react-row';
   const mine = (reactionsByMsg[m.id] || {})[me.id];
   REACT_EMOJIS.forEach(em => {
     const btn = document.createElement('button');
@@ -2740,8 +3318,30 @@ function openReactPicker(m, anchorEl){
     if (em === mine) btn.className = 'mine';
     btn.setAttribute('aria-label', 'React with ' + em);
     btn.onclick = () => { closeReactPicker(); setReaction(m, em); };
-    pk.appendChild(btn);
+    reactRow.appendChild(btn);
   });
+  pk.appendChild(reactRow);
+  // Message actions under the reactions: Reply for every message,
+  // Edit and Delete only on your own (and not while a send is still
+  // in flight — those rows only exist as tmp- placeholders).
+  const isTmp = String(m.id).indexOf('tmp-') === 0;
+  if (!isTmp) {
+    const acts = document.createElement('div');
+    acts.className = 'menu-actions';
+    const mkAct = (ico, label, cls, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      if (cls) b.className = cls;
+      b.innerHTML = IC[ico] + '<span>' + label + '</span>';
+      b.onclick = () => { closeReactPicker(); fn(); };
+      acts.appendChild(b);
+    };
+    mkAct('reply', 'Reply', '', () => { setReplyTo(m); $('thread-text').focus(); });
+    if (m.sender_id === me.id && m.body) mkAct('pencil', 'Edit', '', () => startEditMessage(m));
+    if (m.sender_id === me.id) mkAct('trash', 'Delete', 'danger', () =>
+      askConfirm('Delete Message?', 'This message will be deleted for everyone.', 'Delete', () => deleteMessage(m)));
+    pk.appendChild(acts);
+  }
   pk.classList.remove('hidden');
   const scr = $('screen-thread').getBoundingClientRect();
   const r = anchorEl.getBoundingClientRect();
@@ -2798,8 +3398,10 @@ function wirePhoto(){
   $('btn-photo-close').onclick = closePhoto;
   $('btn-photo-reply').onclick = () => {
     const other = photoReturn;
+    const grp = photoReturnGroup;
     closePhoto();
-    if (other && (!threadOther || threadOther.id !== other.id)) openThread(other);
+    if (grp && (!threadGroup || threadGroup.id !== grp.id)) openGroupThread(grp);
+    else if (other && (!threadOther || threadOther.id !== other.id)) openThread(other);
     setTimeout(() => $('thread-text').focus(), 80);
   };
 }
@@ -2809,16 +3411,61 @@ function subscribeRealtime(){
   sb.channel('blip-feed')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_messages' }, (p) => {
       const m = p.new;
+      if (m.group_id) {
+        const g = myGroups.find(x => x.id === m.group_id);
+        if (!g) return;
+        msgById[m.id] = m;
+        const inThread = threadGroup && threadGroup.id === m.group_id && !$('screen-thread').classList.contains('hidden');
+        if (inThread) {
+          if (!document.querySelector('[data-mid="' + m.id + '"]')) {
+            fetchProfiles([m.sender_id]).then(() => {
+              if (document.querySelector('[data-mid="' + m.id + '"]')) return;
+              if (!threadGroup || threadGroup.id !== m.group_id) return;
+              $('thread-messages').appendChild(bubble(m, true));
+              $('thread-messages').scrollTop = $('thread-messages').scrollHeight;
+              patchReplyQuote(m);
+            });
+          }
+          if (m.sender_id !== me.id) markOpened('g:' + m.group_id);
+        } else {
+          if (m.sender_id !== me.id) notifyGroupMessage(m, g);
+          if (activeView === 'view-chats') loadChats();
+        }
+        return;
+      }
       if (m.sender_id !== me.id && m.receiver_id !== me.id) return;
+      msgById[m.id] = m;
       const inThread = threadOther && !$('screen-thread').classList.contains('hidden') &&
         (m.sender_id === threadOther.id || m.receiver_id === threadOther.id);
       if (inThread) {
         if (!document.querySelector('[data-mid="' + m.id + '"]')) {
           $('thread-messages').appendChild(bubble(m, true));
           $('thread-messages').scrollTop = $('thread-messages').scrollHeight;
+          patchReplyQuote(m);
         }
         if (m.sender_id === threadOther.id) markOpened(threadOther.id);
-      } else if (activeView === 'view-chats') loadChats();
+      } else {
+        if (m.sender_id !== me.id) notifyDirectMessage(m);
+        if (activeView === 'view-chats') loadChats();
+      }
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'blip_messages' }, (p) => {
+      const m = p.new;
+      if (!m || !m.id) return;
+      // An edit landed (mine from another device, or the sender's):
+      // fold it into the cached copy and repaint the bubble so the
+      // new text and its "edited" marker show up live.
+      const merged = msgById[m.id] ? Object.assign(msgById[m.id], m) : (msgById[m.id] = m);
+      if (editingMid === m.id) return;
+      const row = document.querySelector('[data-mid="' + m.id + '"]');
+      if (row) rerenderRow(merged);
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'blip_messages' }, (p) => {
+      const id = p.old && p.old.id;
+      if (!id) return;
+      delete msgById[id];
+      const row = document.querySelector('[data-mid="' + id + '"]');
+      if (row) row.remove();
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_stories' }, () => {
       if (activeView === 'view-stories') loadStories();
@@ -2833,6 +3480,84 @@ function subscribeRealtime(){
       }
       const row = document.querySelector('[data-mid="' + r.message_id + '"]');
       if (row) renderReactions(row, r.message_id);
+    })
+    .subscribe();
+}
+
+/* ---------- desktop notifications (Notification API) ----------
+   While Blip is open on a computer, new messages, friend adds,
+   group invites, and incoming calls raise native OS notifications
+   (Windows toasts / macOS banners) — the same ones Discord and
+   Slack use. Permission comes from the existing Enable Notifications
+   flow (which already calls Notification.requestPermission); the
+   service-worker push backend still covers the app being closed.
+   A notification never fires for the chat already on screen. */
+function desktopNotify(title, body, tag, onClick, icon){
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, { body: body || '', tag: tag || undefined, icon: icon || 'assets/icon-192.png' });
+    n.onclick = () => {
+      try { window.focus(); } catch (e) {}
+      if (onClick) onClick();
+      n.close();
+    };
+  } catch (e) {}
+}
+async function notifyDirectMessage(m){
+  const viewing = !document.hidden && threadOther && threadOther.id === m.sender_id &&
+    !$('screen-thread').classList.contains('hidden');
+  if (viewing) return;
+  await fetchProfiles([m.sender_id]);
+  const p = profilesCache[m.sender_id];
+  desktopNotify((p && p.display_name) || 'New Message', msgSnippet(m), 'chat-' + m.sender_id,
+    () => { if (p) openThread(p); }, p && p.avatar_url);
+}
+async function notifyGroupMessage(m, g){
+  const viewing = !document.hidden && threadGroup && threadGroup.id === m.group_id &&
+    !$('screen-thread').classList.contains('hidden');
+  if (viewing) return;
+  await fetchProfiles([m.sender_id]);
+  const p = profilesCache[m.sender_id];
+  desktopNotify(g.name || 'Group Chat', ((p && p.display_name) || 'Member') + ': ' + msgSnippet(m), 'group-' + m.group_id,
+    () => openGroupThread(g), p && p.avatar_url);
+}
+/* Social events: someone adding me as a friend, being added to a
+   group, members joining a group I'm in, and group renames. */
+function subscribeSocial(){
+  if (!sb || !me) return;
+  sb.channel('blip-social')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_friends' }, async (p) => {
+      const r = p.new;
+      if (!r || r.friend_id !== me.id || r.user_id === me.id) return;
+      await loadFriends();
+      // My own addFriend writes this same mutual row — its echo is
+      // not an incoming friend request.
+      if (friendAddSuppress[r.user_id] && Date.now() - friendAddSuppress[r.user_id] < 15000) return;
+      const pr = profilesCache[r.user_id];
+      desktopNotify(((pr && pr.display_name) || 'Someone') + ' added you as a friend', 'Open Blip to say hi', 'friend-' + r.user_id,
+        () => { if (pr) openThread(pr); }, pr && pr.avatar_url);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blip_group_members' }, async (p) => {
+      const r = p.new;
+      if (!r) return;
+      await loadMyGroups();
+      const g = myGroups.find(x => x.id === r.group_id);
+      if (threadGroup && g && threadGroup.id === g.id) { threadGroup = g; refreshGroupHeader(); }
+      if (activeView === 'view-chats' && $('screen-thread').classList.contains('hidden')) loadChats();
+      if (r.user_id === me.id && g && g.created_by !== me.id) {
+        desktopNotify('You were added to ' + (g.name || 'a group'), 'Tap to open the group chat', 'group-' + g.id,
+          () => openGroupThread(g));
+      }
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'blip_groups' }, async (p) => {
+      if (!p.new) return;
+      await loadMyGroups();
+      if (threadGroup && threadGroup.id === p.new.id) {
+        const g = myGroups.find(x => x.id === p.new.id);
+        if (g) threadGroup = g;
+        refreshGroupHeader();
+      }
+      if (activeView === 'view-chats' && $('screen-thread').classList.contains('hidden')) loadChats();
     })
     .subscribe();
 }
@@ -2884,11 +3609,22 @@ function setCamPerm(v){
 let camPresent = null;       // null = not checked yet, true/false once enumerated
 let camPresencePromise = null;
 let camWatchOn = false;
+/* A device can enumerate a "camera" that is not a camera at all —
+   a virtual/test-pattern source (some driver stacks and capture
+   software install one) happily returns a getUserMedia stream of
+   SMPTE color bars. When a stream check proves the "camera" is one
+   of those, camFakeLatch remembers it for the session so detection
+   keeps answering "no camera" and the camera UI stays hidden.
+   camVerified marks that this session's first real stream already
+   passed the frame check, so later starts don't pay for it again. */
+let camFakeLatch = false;
+let camVerified = false;
+const VIRTUAL_CAM_RE = /virtual|fake|manycam|snap camera|xsplit|ndi|e2esoft|camtwist|sparkocam|simulat|obs/i;
 function detectCameraPresence(){
   if (!camWatchOn && navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
     camWatchOn = true;
     navigator.mediaDevices.addEventListener('devicechange', () => {
-      camPresent = null; camPresencePromise = null; detectCameraPresence();
+      camPresent = null; camPresencePromise = null; camVerified = false; detectCameraPresence();
     });
   }
   if (camPresencePromise) return camPresencePromise;
@@ -2907,7 +3643,15 @@ function detectCameraPresence(){
           navigator.mediaDevices.enumerateDevices(),
           new Promise(res => setTimeout(() => res(null), 3000))
         ]);
-        if (devs) has = devs.some(d => d.kind === 'videoinput');
+        if (devs) {
+          has = devs.some(d => d.kind === 'videoinput');
+          // Labels are readable once permission was granted at some
+          // point: if every video device is a known virtual source,
+          // there is no real camera.
+          const cams = devs.filter(d => d.kind === 'videoinput');
+          if (cams.length && cams.every(d => d.label && VIRTUAL_CAM_RE.test(d.label))) has = false;
+          if (camFakeLatch) has = false;
+        }
       }
     } catch (e) {}
     camPresent = has;
@@ -2915,6 +3659,58 @@ function detectCameraPresence(){
     return has;
   })();
   return camPresencePromise;
+}
+/* Prove a freshly opened stream is a real camera and not a test
+   pattern: sample two frames a beat apart. A pattern generator
+   produces pixel-identical frames made of a handful of flat colors;
+   a real sensor never does (its noise alone shifts pixels), so only
+   the combination — identical frames AND almost no distinct colors
+   — condemns the device. Any doubt acquits: this only ever runs
+   once per session, before the first preview. */
+async function verifyRealCamera(stream){
+  try {
+    const v = document.createElement('video');
+    v.srcObject = stream; v.muted = true; v.playsInline = true;
+    await v.play();
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 36;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    const snap = () => { ctx.drawImage(v, 0, 0, 64, 36); return ctx.getImageData(0, 0, 64, 36).data; };
+    let a = null;
+    for (let i = 0; i < 20 && !a; i++) {
+      if (v.readyState >= 2 && v.videoWidth > 0) a = snap();
+      else await wait(100);
+    }
+    if (!a) return false;
+    await wait(650);
+    if (v.readyState < 2) return false;
+    const b = snap();
+    let identical = true;
+    const colors = new Set();
+    for (let i = 0; i < a.length; i += 4) {
+      colors.add(a[i] + ',' + a[i + 1] + ',' + a[i + 2]);
+      if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) identical = false;
+    }
+    return !(identical && colors.size <= 48);
+  } catch (e) { return true; }
+}
+/* Settings > Check for Camera: forget the cached answer (and any
+   test-pattern verdict) and enumerate again, so a webcam plugged in
+   after launch turns the camera UI on right away — no reload. */
+async function recheckCamera(){
+  camPresent = null; camPresencePromise = null;
+  camFakeLatch = false; camVerified = false;
+  toast('Checking for a Camera…');
+  const has = await detectCameraPresence();
+  applyCameraAvailability();
+  syncCameraRow();
+  loadStories();
+  toast(has ? 'Camera Found' : 'No Camera Found on This Device');
+}
+function syncCameraRow(){
+  const el = $('setg-camera-val');
+  if (!el) return;
+  el.textContent = camPresent === null ? '' : (camPresent ? 'Found' : 'None Found');
 }
 async function deviceHasCamera(){
   if (camPresent !== null) return camPresent;
@@ -3025,6 +3821,23 @@ async function openCameraStream(gen){
     // orphaned video elements and competing draw loops.
     stream.getTracks().forEach(t => t.stop());
     return;
+  }
+  // The first stream of the session has to prove it's a real camera.
+  // A test-pattern source (color bars from a virtual driver) fails
+  // the frame check: the stream is dropped, the device is latched
+  // as camera-less, and every piece of camera UI disappears.
+  if (!camVerified) {
+    camVerified = true;
+    const real = await verifyRealCamera(stream);
+    if (gen !== camGen) { stream.getTracks().forEach(t => t.stop()); return; }
+    if (!real) {
+      stream.getTracks().forEach(t => t.stop());
+      camFakeLatch = true;
+      camPresent = false;
+      applyCameraAvailability();
+      if (me) loadStories();
+      return;
+    }
   }
   publishCamStream(stream);
 }
@@ -3803,6 +4616,7 @@ function wireSendSheet(){
   $('sheet-send').addEventListener('click', (e) => { if (e.target === $('sheet-send')) { stopSendPreview(); hide($('sheet-send')); } });
 }
 async function openSendSheet(imageUrl){
+  $('send-title').value = '';
   const vid = isVideoUrl(imageUrl);
   const clean = cleanMediaUrl(imageUrl);
   $('send-preview').classList.toggle('hidden', vid);
@@ -3830,14 +4644,40 @@ async function openSendSheet(imageUrl){
     };
     list.appendChild(r);
   });
-  if (!people.length) list.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">No friends yet — add a friend first, or post it to your story.</p>';
+  if (myGroups.length) {
+    const gh = document.createElement('div');
+    gh.className = 'sec-label'; gh.style.padding = '12px 0 6px'; gh.textContent = 'Groups';
+    list.appendChild(gh);
+    myGroups.forEach(g => {
+      const r = document.createElement('div');
+      r.className = 'pick-row';
+      r.innerHTML = groupAvatarHTML(g, 'sm') + '<div class="row-main"><b>' + esc(g.name) + '</b><span>' + (g.members || []).length + ' members</span></div>';
+      r.onclick = async () => {
+        stopSendPreview();
+        hide($('sheet-send'));
+        await sendGroupMessage(g.id, null, imageUrl, null, null);
+        openGroupThread(g);
+      };
+      list.appendChild(r);
+    });
+  }
+  if (!people.length && !myGroups.length) list.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">No friends yet — add a friend first, or post it to your story.</p>';
   $('btn-send-story').onclick = async () => {
     stopSendPreview();
     hide($('sheet-send'));
-    const { error } = await sb.from('blip_stories').insert({
+    const title = $('send-title').value.trim();
+    const payload = {
       user_id: me.id, image_url: imageUrl,
       expires_at: new Date(Date.now() + 864e5).toISOString()
-    });
+    };
+    if (title) payload.title = title;
+    let { error } = await sb.from('blip_stories').insert(payload);
+    if (error && title) {
+      // The title column may not exist on older backends — post the
+      // story anyway rather than losing it over the caption.
+      delete payload.title;
+      ({ error } = await sb.from('blip_stories').insert(payload));
+    }
     if (error) toast('Could not post story: ' + error.message);
     else { toast('Posted to Your Story'); switchView('view-stories'); }
   };
@@ -3870,12 +4710,18 @@ async function loadStories(){
   // My Story strip
   const strip = $('my-story-strip'); strip.innerHTML = '';
   const mine = byUser.get(me.id);
-  const chip = document.createElement('div');
-  chip.className = 'story-chip';
-  chip.innerHTML = '<div class="ring-wrap"><div class="ring ' + (mine ? 'purple' : 'yellow') + '"><div class="ring-inner">' + avatarHTML(me, 'md') + '</div></div>' +
-    (mine ? '' : '<span class="plus">' + IC.plus + '</span>') + '</div><span>' + (mine ? 'My Story' : 'Add to Story') + '</span>';
-  chip.onclick = () => { if (mine) openStoryViewer(me, mine); else switchView('view-camera'); };
-  strip.appendChild(chip);
+  // With no camera on this device there is no way to create a story,
+  // so the "Add to Story" chip is not offered at all. A user who
+  // already has stories keeps the "My Story" chip — viewing your own
+  // stories never needed a camera.
+  if (mine || camPresent !== false) {
+    const chip = document.createElement('div');
+    chip.className = 'story-chip';
+    chip.innerHTML = '<div class="ring-wrap"><div class="ring ' + (mine ? 'purple' : 'yellow') + '"><div class="ring-inner">' + avatarHTML(me, 'md') + '</div></div>' +
+      (mine ? '' : '<span class="plus">' + IC.plus + '</span>') + '</div><span>' + (mine ? 'My Story' : 'Add to Story') + '</span>';
+    chip.onclick = () => { if (mine) openStoryViewer(me, mine); else switchView('view-camera'); };
+    strip.appendChild(chip);
+  }
   if (mine) {
     const viewChip = document.createElement('div');
     viewChip.className = 'story-chip';
@@ -3947,6 +4793,9 @@ function renderStorySeg(){
   }
   $('btn-story-del').classList.toggle('hidden', who.id !== me.id);
   $('story-reply-bar').classList.toggle('hidden', who.id === me.id);
+  const sTitle = s.title || s.caption || '';
+  $('story-title').textContent = sTitle;
+  $('story-title').classList.toggle('hidden', !sTitle);
   const prog = $('story-progress'); prog.innerHTML = '';
   items.forEach((_, i) => {
     const seg = document.createElement('div'); seg.className = 'seg';
@@ -4050,6 +4899,7 @@ function onCallSignal(p){
     setCallStatus(type === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call');
     hide($('call-controls')); show($('call-incoming'));
     startRing();
+    desktopNotify(p.fromName || 'Friend', type === 'video' ? 'Incoming video call' : 'Incoming voice call', 'call-' + p.fromId, null);
     if (navigator.vibrate) { try { navigator.vibrate([500, 250, 500, 250, 500]); } catch (e) {} }
     const cs = callState;
     cs.ringTimeout = setTimeout(() => { if (callState === cs && !cs.connected) endCall(false); }, 45000);
@@ -4460,8 +5310,57 @@ async function sendCallPush(other, type){
   } catch (e) {}
 }
 
+/* ---------- install Blip (PWA) ----------
+   Chrome and Edge offer an install prompt for Blip (it ships a
+   manifest + service worker): beforeinstallprompt is captured when
+   the browser fires it, and Settings > Add to Taskbar plays it back.
+   Browsers that never fire it (Firefox, Safari) get the manual menu
+   steps for their browser instead. Installing pins Blip to the
+   Windows taskbar / macOS Dock like a native app. */
+let installPromptEvent = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPromptEvent = e;
+  syncInstallRow();
+});
+window.addEventListener('appinstalled', () => { installPromptEvent = null; syncInstallRow(); });
+function isInstalled(){
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+function syncInstallRow(){
+  const val = $('setg-install-val');
+  if (!val) return;
+  val.textContent = isInstalled() ? 'Installed' : 'Install Blip';
+}
+function wireInstall(){
+  $('setg-install').onclick = () => doInstall();
+  $('btn-install-close').onclick = () => hide($('sheet-install'));
+  $('sheet-install').addEventListener('click', (e) => { if (e.target === $('sheet-install')) hide($('sheet-install')); });
+}
+async function doInstall(){
+  if (isInstalled()) { toast('Blip Is Already Installed'); return; }
+  if (installPromptEvent) {
+    try {
+      installPromptEvent['prompt']();
+      await installPromptEvent.userChoice;
+    } catch (e) {}
+    installPromptEvent = null;
+    syncInstallRow();
+    return;
+  }
+  const ua = navigator.userAgent || '';
+  let steps;
+  if (/Edg\//.test(ua)) steps = 'In Edge, open the ⋯ menu at the top right, then Apps → "Install Blip". To pin it instead, use ⋯ → More tools → "Pin to taskbar".';
+  else if (/Chrome\//.test(ua)) steps = 'In Chrome, open the ⋮ menu at the top right, then "Save and share" → "Install Blip". Blip lands on your taskbar/dock like a regular app.';
+  else if (/Firefox\//.test(ua)) steps = 'Firefox on desktop can\'t install web apps. Open Blip in Chrome or Edge and use Add to Taskbar there to pin it.';
+  else if (/Safari\//.test(ua)) steps = 'In Safari, open the File menu and choose "Add to Dock" — Blip will live in your Dock like an app.';
+  else steps = 'Open your browser\'s menu and look for "Install Blip" or "Add to taskbar".';
+  $('install-steps').textContent = steps;
+  show($('sheet-install'));
+}
+
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.2245';
+const BLIP_VERSION = '2026.10.17.2345';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
