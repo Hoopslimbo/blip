@@ -32,7 +32,7 @@
   --danger:#e72b4e;
   --shadow:0 10px 34px rgba(15,16,20,.16);
   --ease:cubic-bezier(.22,.9,.32,1);
-  --tabbar-h:calc(60px + env(safe-area-inset-bottom));
+  --tabbar-h:calc(46px + env(safe-area-inset-bottom));
   --head-h:calc(56px + env(safe-area-inset-top));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -197,20 +197,23 @@ img{display:block}
 .f-act.msg:active{background:var(--yellow)}
 
 /* ---------- bottom nav ---------- */
+/* Compact bar: a slim content row (46px, see --tabbar-h) sitting on the
+   bottom safe-area inset, so the buttons hug the bottom edge of the
+   screen instead of floating in a tall white slab. */
 #tabbar{
   height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
   display:flex;align-items:flex-start;background:#fff;border-top:1px solid var(--line);flex:none;z-index:6;
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:8px;color:#68727f;font-size:10.5px;font-weight:700}
-.tab svg{width:25px;height:25px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:5px;color:#68727f;font-size:10px;font-weight:700}
+.tab svg{width:23px;height:23px}
 .tab.active{color:var(--yellow)}
 .tab-cam-btn{
-  width:58px;height:58px;border-radius:50%;background:var(--yellow);
-  display:flex;align-items:center;justify-content:center;margin-top:-16px;
+  width:50px;height:50px;border-radius:50%;background:var(--yellow);
+  display:flex;align-items:center;justify-content:center;margin-top:-11px;
   box-shadow:0 4px 14px rgba(0,0,0,.18);border:3px solid #fff;color:#000;transition:transform .12s;
 }
 .tab-cam-btn:active{transform:scale(.93)}
-.tab-cam-btn svg{width:28px;height:28px}
+.tab-cam-btn svg{width:25px;height:25px}
 .tab-cam-wrap{flex:1;display:flex;flex-direction:column;align-items:center}
 
 /* ---------- camera ---------- */
@@ -235,7 +238,6 @@ img{display:block}
 .cam-msg p{margin:0;font-size:16px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.7)}
 .btn-white{background:#fff;color:#000;border-radius:999px;padding:13px 26px;font-weight:800;font-size:15px}
 .btn-ghost-w{color:#fff;font-weight:700;font-size:14.5px;padding:8px;text-shadow:0 1px 5px rgba(0,0,0,.7)}
-.flash-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:5}
 
 /* ---------- photo editor ---------- */
 #screen-editor{z-index:45;background:#000}
@@ -472,7 +474,6 @@ img{display:block}
     <!-- Camera -->
     <div id="view-camera" class="camera-pane hidden">
       <canvas id="cam-canvas"></canvas>
-      <div class="flash-flash" id="flash-flash"></div>
       <div class="cam-top">
         <div class="col">
           <span id="cam-me"></span>
@@ -480,7 +481,6 @@ img{display:block}
         </div>
         <div class="col">
           <button class="cam-ctl" id="btn-flip" aria-label="Flip camera"></button>
-          <button class="cam-ctl" id="btn-flash" aria-label="Toggle flash"></button>
           <button class="cam-ctl" id="btn-add-cam" aria-label="Add friend"></button>
         </div>
       </div>
@@ -818,7 +818,7 @@ setIco($('btn-thread-back'), 'chevL'); setIco($('btn-profile-back'), 'chevL');
 setIco($('btn-friends-back'), 'chevL'); setIco($('btn-user-back'), 'chevL');
 setIco($('btn-thread-call'), 'phone'); setIco($('btn-thread-video'), 'video');
 setIco($('btn-thread-send'), 'send'); setIco($('btn-thread-cam'), 'camera');
-setIco($('btn-flip'), 'flip'); setIco($('btn-flash'), 'boltOff');
+setIco($('btn-flip'), 'flip');
 setIco($('btn-cam-search'), 'search'); setIco($('btn-add-cam'), 'addUser');
 setIco($('btn-story-close'), 'x'); setIco($('btn-photo-close'), 'x'); setIco($('btn-story-del'), 'trash');
 setIco($('btn-update-dismiss'), 'x');
@@ -831,7 +831,12 @@ let threadOther = null;
 let profilesCache = {};
 let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
 let nameChanged = false;     // one-time display-name change used?
-let camStream = null, facing = 'user', flashOn = false;
+let camStream = null, facing = 'user';
+/* Set the moment camera access is refused (by the user, or remembered as
+   denied by the browser): from then on the app never fires another
+   getUserMedia on its own, so the permission prompt can appear at most
+   once — only the explicit "Turn On Camera" button may try again. */
+let camDenied = false;
 let camRunning = false;
 let storyState = { who: null, items: [], idx: 0, timer: null };
 let photoReturn = null;       // where to go after closing a photo message
@@ -1533,17 +1538,10 @@ function subscribeRealtime(){
 /* ---------- camera ---------- */
 function wireCamera(){
   $('btn-shutter').onclick = capturePhoto;
-  $('btn-cam-start').onclick = startCamera;
+  // The one user-initiated retry: tapping "Turn On Camera" clears the
+  // denial latch so a single fresh ask is allowed; nothing else re-asks.
+  $('btn-cam-start').onclick = () => { camDenied = false; startCamera(); };
   $('btn-flip').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; stopCamera(); startCamera(); };
-  $('btn-flash').onclick = () => {
-    flashOn = !flashOn;
-    $('btn-flash').classList.toggle('on', flashOn);
-    setIco($('btn-flash'), flashOn ? 'bolt' : 'boltOff');
-    const track = camStream && camStream.getVideoTracks()[0];
-    if (track && track.getCapabilities && track.getCapabilities().torch) {
-      track.applyConstraints({ advanced: [{ torch: flashOn }] }).catch(() => {});
-    }
-  };
   const onFile = (e) => { const f = e.target.files[0]; if (f) uploadFallback(f); e.target.value = ''; };
   $('file-upload').onchange = onFile;
   $('file-upload2').onchange = onFile;
@@ -1552,17 +1550,22 @@ function wireCamera(){
 async function startCamera(){
   hide($('cam-off'));
   if (camStream) { camRunning = true; requestAnimationFrame(camTick); return; }
-  // If camera access was already denied, don't fire another request (and
-  // another prompt) — just show the off state with the upload option.
+  // Asked and refused once already (this session): never ask again on our
+  // own — iOS re-prompts on a fresh getUserMedia once the old stream is
+  // gone, which is what made it feel like it asked every single time.
+  // Just show the off state with the upload option.
+  if (camDenied) { show($('cam-off')); return; }
+  // A denial the browser still remembers from before gets the same
+  // treatment: latch it and don't fire a request that would prompt again.
   if (navigator.permissions && navigator.permissions.query) {
     try {
       const st = await navigator.permissions.query({ name: 'camera' });
-      if (st.state === 'denied') { show($('cam-off')); return; }
+      if (st.state === 'denied') { camDenied = true; show($('cam-off')); return; }
     } catch (e) {}
   }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
-  } catch (e) { show($('cam-off')); return; }
+  } catch (e) { camDenied = true; show($('cam-off')); return; }
   const v = document.createElement('video');
   v.srcObject = camStream; v.muted = true; v.playsInline = true;
   await v.play();
@@ -1591,11 +1594,6 @@ function camTick(){
 function capturePhoto(){
   const canvas = $('cam-canvas');
   if (!canvas.width) { show($('cam-off')); return; }
-  if (flashOn) {
-    const f = $('flash-flash');
-    f.style.transition = 'none'; f.style.opacity = '0.9';
-    requestAnimationFrame(() => { f.style.transition = 'opacity .45s'; f.style.opacity = '0'; });
-  }
   // Into the editor first (text, drawing) — uploading happens on Done.
   openEditor(canvas);
 }
@@ -2474,7 +2472,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0012';
+const BLIP_VERSION = '2026.10.17.0013';
 let updateAvailable = false;
 let updateDismissed = false;
 async function checkForUpdate(){
