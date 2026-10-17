@@ -21,7 +21,7 @@
   --yellow:#1e90ff;
   --ink:#0f1014;
   --ink2:#656d78;
-  --ink3:#9aa3ae;
+  --ink3:#68727f;
   --line:#ececf0;
   --bg:#ffffff;
   --sheet:#ffffff;
@@ -37,10 +37,19 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
+html{background:var(--root-bg,#1e90ff)}
 body{
   margin:0;background:#e9e9ee;color:var(--ink);
   font-family:"Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior:none;
+}
+/* On a phone the area around the app (anything the stage doesn't cover)
+   paints the root background, so the root tracks the visible screen's
+   color (--root-bg, kept in sync by syncRootBg in the script): a leftover
+   sliver then matches the screen above it instead of showing as a pale
+   "white bar" along the bottom. */
+@media(max-width:479px){
+  body{background:var(--root-bg,#1e90ff)}
 }
 button{font:inherit;border:0;background:none;color:inherit;cursor:pointer;padding:0}
 input{font:inherit;border:0;background:none;color:inherit}
@@ -48,10 +57,15 @@ img{display:block}
 .hidden{display:none!important}
 
 /* ---------- stage ---------- */
-/* Pinned to the real viewport edges: a percentage/dvh height can come up
-   short of the actual screen in a phone webview and leave a bare strip of
-   page background showing along the bottom (the "white bar"). */
-#stage{position:fixed;inset:0;width:100%;max-width:430px;margin:0 auto;background:var(--bg);overflow:hidden}
+/* Pinned to the top-left corner and given an explicit height measured by
+   the script (--app-h = window.innerHeight, refreshed on resize / rotate /
+   pageshow / keyboard close). Anchoring with inset/bottom alone trusts the
+   webview's layout viewport, which an iOS home-screen app can report short
+   of the physical screen — the stage then stops early and a strip of root
+   background shows along the bottom as a pale "white bar". Measuring the
+   height in JS and painting the root the screen's color (see --root-bg)
+   closes that gap from both sides. */
+#stage{position:fixed;top:0;left:0;right:0;width:100%;height:100%;height:100dvh;height:var(--app-h,100dvh);max-width:430px;margin:0 auto;background:var(--bg);overflow:hidden}
 @media(min-width:480px){
   #stage{inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);height:min(932px,100dvh);border-radius:26px;box-shadow:var(--shadow)}
 }
@@ -81,7 +95,7 @@ img{display:block}
   width:100%;background:rgba(255,255,255,.92);border-radius:999px;padding:14px 20px;
   font-size:16px;margin-bottom:11px;outline:none;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.06);
 }
-.field::placeholder{color:#9aa3ae}
+.field::placeholder{color:var(--ink3)}
 .field:focus{box-shadow:inset 0 0 0 2px var(--ink)}
 .btn-yellow{
   background:var(--ink);color:#fff;border-radius:999px;padding:15px;font-weight:800;font-size:16px;
@@ -89,8 +103,14 @@ img{display:block}
 }
 .btn-yellow:active{transform:scale(.97)}
 .btn-yellow:disabled{opacity:.5}
-.btn-toggle{margin-top:14px;font-weight:700;font-size:14px;color:rgba(15,16,20,.75);padding:6px}
-.error{min-height:20px;color:#d61c3f;font-size:13.5px;font-weight:600;margin:10px 2px 0}
+.btn-toggle{margin-top:14px;font-weight:700;font-size:14px;color:rgba(15,16,20,.88);padding:6px}
+.error{min-height:20px;color:#c8102e;font-size:13.5px;font-weight:600;margin:10px 2px 0}
+/* On the blue auth screen red text is unreadable, so there the error sits
+   in a white chip with dark-red text (only painted when a message exists). */
+#auth-error:not(:empty){background:#fff;color:#b3001b;border-radius:999px;padding:8px 16px;box-shadow:0 4px 14px rgba(15,16,20,.18)}
+.btn-retry{margin-top:14px;background:#fff;color:var(--ink);border-radius:999px;padding:12px 30px;font-weight:800;font-size:15px;box-shadow:0 4px 14px rgba(15,16,20,.18);transition:transform .1s,opacity .15s}
+.btn-retry:active{transform:scale(.96)}
+.btn-retry:disabled{opacity:.55}
 
 /* ---------- header ---------- */
 .app-head{
@@ -181,7 +201,7 @@ img{display:block}
   height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
   display:flex;align-items:flex-start;background:#fff;border-top:1px solid var(--line);flex:none;z-index:6;
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:8px;color:#8b939e;font-size:10.5px;font-weight:700}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:8px;color:#68727f;font-size:10.5px;font-weight:700}
 .tab svg{width:25px;height:25px}
 .tab.active{color:var(--yellow)}
 .tab-cam-btn{
@@ -401,6 +421,7 @@ img{display:block}
       </form>
       <button id="btn-auth-toggle" class="btn-toggle" type="button">Already have an account? Log In</button>
       <p id="auth-error" class="error"></p>
+      <button id="btn-auth-retry" class="btn-retry hidden" type="button">Try Again</button>
     </div>
   </div>
 
@@ -824,10 +845,19 @@ async function init(){
   checkForUpdate();
   // Only the splash is visible while we check for an existing session —
   // a signed-in user goes straight into the app with no login flash.
-  if (!sb) { const ok = await loadSupabaseLib(); if (ok) makeClient(); }
+  // A slow or blocked CDN script is retried a few times behind the splash
+  // before the auth screen (and any error) is shown at all.
+  if (!sb) {
+    for (let attempt = 0; attempt < 3 && !sb; attempt++) {
+      const ok = await loadSupabaseLib();
+      if (ok) makeClient();
+      if (!sb && attempt < 2) await wait(900);
+    }
+  }
   if (!sb) {
     hide($('screen-splash')); show($('screen-auth'));
-    $('auth-error').textContent = 'Could not connect — check your connection, then reload.';
+    $('auth-error').textContent = "Couldn't load Blip — check your connection, then tap Try Again.";
+    show($('btn-auth-retry'));
     return;
   }
   const { data } = await sb.auth.getSession();
@@ -842,7 +872,27 @@ function wireAuth(){
     $('auth-name-wrap').style.display = authMode === 'signup' ? '' : 'none';
     $('auth-error').textContent = '';
   };
+  $('btn-auth-retry').onclick = retryConnect;
   $('auth-form').onsubmit = doAuth;
+}
+/* The startup load never landed: Try Again re-runs it, then picks up
+   exactly where init() left off (straight into the app if a session
+   already exists on this device). */
+async function retryConnect(){
+  const btn = $('btn-auth-retry');
+  btn.disabled = true;
+  $('auth-error').textContent = 'Reconnecting…';
+  for (let attempt = 0; attempt < 3 && !sb; attempt++) {
+    const ok = await loadSupabaseLib();
+    if (ok) makeClient();
+    if (!sb && attempt < 2) await wait(900);
+  }
+  btn.disabled = false;
+  if (!sb) { $('auth-error').textContent = "Couldn't load Blip — check your connection, then tap Try Again."; return; }
+  hide(btn);
+  $('auth-error').textContent = '';
+  const { data } = await sb.auth.getSession();
+  if (data.session) await enterApp(data.session.user);
 }
 const NET_ERR_MSG = "Couldn't reach Blip's servers — check your connection and try again.";
 function isNetworkError(err){
@@ -865,7 +915,17 @@ async function authCall(fn){
 }
 async function doAuth(e){
   e.preventDefault();
-  if (!sb) { $('auth-error').textContent = NET_ERR_MSG; return; }
+  if (!sb) {
+    // The library never loaded at startup — give it one more chance here
+    // instead of dead-ending on the error text.
+    $('btn-auth').disabled = true;
+    $('auth-error').textContent = 'Reconnecting…';
+    const ok = await loadSupabaseLib(); if (ok) makeClient();
+    $('btn-auth').disabled = false;
+    if (!sb) { $('auth-error').textContent = NET_ERR_MSG; return; }
+    hide($('btn-auth-retry'));
+    $('auth-error').textContent = '';
+  }
   const email = $('auth-email').value.trim();
   const pw = $('auth-password').value;
   $('auth-error').textContent = '';
@@ -2053,7 +2113,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.16.1905';
+const BLIP_VERSION = '2026.10.16.2355';
 let updateAvailable = false;
 let updateDismissed = false;
 async function checkForUpdate(){
@@ -2074,6 +2134,41 @@ function maybeShowUpdateBanner(){
 }
 $('btn-update-now').onclick = () => { if (!callState) location.reload(); };
 $('btn-update-dismiss').onclick = () => { updateDismissed = true; hide($('update-banner')); };
+
+/* ---------- viewport fit + root color (the "white bar" fix) ---------- */
+/* --app-h: the stage's height, measured from window.innerHeight (the full
+   device height in a home-screen app) instead of trusting the layout
+   viewport, which iOS can report short of the screen at cold launch or
+   leave shrunk after the keyboard closes. Re-measured whenever the
+   viewport settles; a shrink reported while a text field is focused is
+   the keyboard opening and is ignored, then re-measured after blur. */
+function fitStage(){
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
+  const h = window.innerHeight;
+  if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+function fitStageSoon(){ fitStage(); setTimeout(fitStage, 150); setTimeout(fitStage, 500); }
+window.addEventListener('resize', fitStage);
+window.addEventListener('orientationchange', fitStageSoon);
+window.addEventListener('pageshow', fitStageSoon);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitStage);
+document.addEventListener('focusout', () => setTimeout(fitStage, 350));
+fitStageSoon();
+
+/* --root-bg: whatever the stage doesn't cover paints this color, so keep
+   it matched to the visible screen (blue splash/auth, dark viewers, white
+   app) and no leftover strip can show as a contrasting bar. */
+function syncRootBg(){
+  const vis = (id) => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
+  let c = '#ffffff';
+  if (vis('screen-call')) c = '#101318';
+  else if (vis('screen-story') || vis('screen-photo')) c = '#000000';
+  else if (vis('screen-splash') || vis('screen-auth')) c = '#1e90ff';
+  document.documentElement.style.setProperty('--root-bg', c);
+}
+new MutationObserver(syncRootBg).observe($('stage'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+syncRootBg();
 
 init();
 </script>
