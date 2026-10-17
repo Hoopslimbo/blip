@@ -32,7 +32,7 @@
   --danger:#e72b4e;
   --shadow:0 10px 34px rgba(15,16,20,.16);
   --ease:cubic-bezier(.22,.9,.32,1);
-  --tabbar-h:calc(44px + env(safe-area-inset-bottom));
+  --tabbar-h:calc(42px + env(safe-area-inset-bottom));
   --head-h:calc(56px + env(safe-area-inset-top));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -197,20 +197,22 @@ img{display:block}
 .f-act.msg:active{background:var(--yellow)}
 
 /* ---------- bottom nav ---------- */
-/* Compact bar: a slim content row (44px, see --tabbar-h) sitting on the
-   bottom safe-area inset, so the buttons hug the bottom edge of the
-   screen instead of floating in a tall white slab. The bar is positioned
-   with its own stacking layer so it (and the raised camera button riding
-   its top edge) always paints above the scrolling pane instead of being
-   sliced by it, and the camera button is anchored to the bar's top edge
-   with a transform rather than a negative margin inside the flex row —
-   the old in-flow overflow is what got clipped flush with the bar. */
+/* Compact bar: one slim content row (42px, see --tabbar-h) plus the
+   bottom safe-area inset and nothing else, so the strip hugs the bottom
+   edge of the screen. Tab content is vertically centered in that row —
+   never top-aligned — so no empty white band can open up under the
+   icons inside the bar. The bar is positioned with its own stacking
+   layer so it (and the raised camera button riding its top edge) always
+   paints above the scrolling pane instead of being sliced by it, and
+   the camera button is anchored to the bar's top edge with a transform
+   rather than a negative margin inside the flex row — the old in-flow
+   overflow is what got clipped flush with the bar. */
 #tabbar{
   position:relative;z-index:10;
   height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
   display:flex;align-items:stretch;background:#fff;border-top:1px solid var(--line);flex:none;
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;padding-top:6px;color:#68727f;font-size:10px;font-weight:700}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#68727f;font-size:10px;font-weight:700}
 .tab svg{width:23px;height:23px}
 .tab.active{color:var(--yellow)}
 .tab-cam-btn{
@@ -922,25 +924,24 @@ let profilesCache = {};
 let openedMap = {};          // otherId -> ISO timestamp when I last opened that thread
 let nameChanged = false;     // one-time display-name change used?
 let camStream = null, facing = 'user';
-/* Set the moment camera access is refused (by the user, or remembered as
-   denied by the browser): from then on the app never fires another
-   getUserMedia on its own, so the permission prompt can appear at most
-   once — only the explicit "Turn On Camera" button may try again. */
+/* Set the moment camera access is refused: from then on the app never
+   fires another getUserMedia on its own, so the permission prompt can
+   appear at most once — only the explicit "Turn On Camera" button may
+   try again. */
 let camDenied = false;
 /* The camera permission outcome, remembered on this device (in the same
-   local store as the read markers): 'granted' or 'denied'. A remembered
-   denial means the app never fires an automatic ask again on later
-   launches — the prompt is a once-ever thing unless the user taps
-   "Turn On Camera" themselves.
-   IMPORTANT: a remembered 'granted' is NOT a reason to auto-start.
-   Safari/WebKit ties a camera grant to the live browsing session and
-   stops honoring it once every track has stopped (always true on a
-   fresh launch), so an automatic getUserMedia on launch re-prompts
-   there no matter what was granted last time — that is exactly the
-   "asks every time I open it" bug. Automatic starts therefore trust
-   only the browser's live Permissions API state (see startCamera);
-   where the browser cannot confirm a live grant, the camera waits for
-   the user's own tap instead of asking uninvited. */
+   local store as the read markers): 'granted' or 'denied'. Automatic
+   starts attempt the camera directly with getUserMedia and let the
+   browser apply the answer it already has: once the user has granted,
+   the browser hands back the stream with no prompt at all, so the
+   camera is simply on when the app opens. A remembered denial means
+   the app never asks again on its own — only the "Turn On Camera"
+   button asks, when the user taps it.
+   (An earlier build gated automatic starts on the Permissions API:
+   Safari reports camera as 'prompt' there even when the grant will be
+   honored by getUserMedia, so the gate never let an automatic start
+   through and showed "Camera Is Off" on every single open. Never gate
+   on it again — attempt the camera and see.) */
 let camPerm = '';
 let camStarting = null;      // in-flight getUserMedia promise (single-flight)
 let camRunning = false;
@@ -1123,10 +1124,10 @@ async function enterApp(user){
   loadLocal();
   refreshMyAvatars();
   hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
-  // Land on the camera — it's the first thing the app opens to. Opening
-  // never fires a permission ask by itself: startCamera only revives the
-  // preview when the browser confirms the grant is still live, and
-  // otherwise shows the "Turn On Camera" state for the user's own tap.
+  // Land on the camera — it's the first thing the app opens to.
+  // startCamera attempts the camera directly: with a grant already
+  // given, the preview is just on, with no prompt; the "Camera Is Off"
+  // state only appears after a refusal.
   switchView('view-camera');
   loadFriends();
   loadChats(); loadStories();
@@ -1806,10 +1807,10 @@ function subscribeRealtime(){
 /* ---------- camera ---------- */
 function wireCamera(){
   $('btn-shutter').onclick = capturePhoto;
-  // The one user-initiated ask: tapping "Turn On Camera" clears the
-  // denial latch (session and remembered) and requests access inside
-  // that tap's user activation. Nothing else ever asks — automatic
-  // starts may only reuse a grant the browser confirms is still live.
+  // Tapping "Turn On Camera" clears the denial latch (session and
+  // remembered) and requests access inside that tap's user activation —
+  // the way back in after a refusal. Everywhere else the app simply
+  // opens the camera and lets the browser apply the grant it holds.
   $('btn-cam-start').onclick = () => { camDenied = false; camPerm = ''; saveLocal(); startCamera(true); };
   $('btn-flip').onclick = flipCamera;
   const onFile = (e) => { const f = e.target.files[0]; if (f) uploadFallback(f); e.target.value = ''; };
@@ -1822,21 +1823,21 @@ function setCamPerm(v){
   camPerm = v;
   if (me) saveLocal();
 }
-/* Camera starts come in two kinds, and only one of them may ever show
-   the system permission prompt:
-   - AUTOMATIC starts (app launch, tab switches, coming back from a
-     call) may only reuse a grant the browser itself confirms is still
-     live via the Permissions API. On browsers that keep grants across
-     launches (Chrome/Android, desktop) the preview just resumes,
-     silently. On Safari/WebKit the grant dies with the session's
-     tracks, the state reads 'prompt', and the camera simply waits on
-     its off screen — no uninvited ask, ever. That unconditioned
-     auto-ask on launch was the "asks every time I open it" bug: no
-     localStorage flag can stop the browser re-prompting when the app
-     itself keeps calling getUserMedia.
-   - EXPLICIT starts (the "Turn On Camera" button) are the user's own
-     tap, so the request runs synchronously inside that tap's user
-     activation and is allowed to ask — once, when the user asks for it. */
+/* Every camera start — automatic (app launch, tab switches, coming
+   back from a call) or explicit (the "Turn On Camera" button) — goes
+   straight to getUserMedia. The browser itself decides whether a
+   prompt is needed: once the user has granted, it re-uses that grant
+   and returns the stream silently, so the camera is just ON when the
+   app opens. No Permissions API check sits in between — Safari answers
+   'prompt' there even for a grant getUserMedia would honor, and gating
+   on it stranded the camera on its off screen at every launch ("says
+   camera is off and I need to grant permission again"). The system
+   prompt can therefore appear only when the browser holds no
+   remembered answer: the first-ever start, or after the user revokes
+   access in their browser settings. A refusal is latched, for this
+   session and remembered on the device: from then on starts show the
+   off state without asking, and only the "Turn On Camera" button —
+   the user's own tap — may ask again. */
 async function startCamera(explicit){
   if (camStream) { hide($('cam-off')); camRunning = true; requestAnimationFrame(camTick); return; }
   // Asked and refused (this session, or remembered from an earlier one):
@@ -1851,18 +1852,6 @@ async function startCamera(explicit){
     else show($('cam-off'));
     return;
   }
-  if (!explicit) {
-    // Automatic start: no live-grant confirmation, no request.
-    let liveGrant = false;
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const st = await navigator.permissions.query({ name: 'camera' });
-        if (st.state === 'denied') { camDenied = true; setCamPerm('denied'); show($('cam-off')); return; }
-        if (st.state === 'granted') { setCamPerm('granted'); liveGrant = true; }
-      } catch (e) {}
-    }
-    if (!liveGrant) { show($('cam-off')); return; }
-  }
   camStarting = openCameraStream();
   await camStarting;
   camStarting = null;
@@ -1871,7 +1860,14 @@ async function startCamera(explicit){
 async function openCameraStream(){
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
-  } catch (e) { camDenied = true; setCamPerm('denied'); return; }
+  } catch (e) {
+    // Only a refusal latches: the user said no (or the browser is
+    // holding a denial), so the app never asks again uninvited. Any
+    // other failure (no camera found, camera busy) just shows the off
+    // state this once and leaves the next start free to try again.
+    if (e && e.name === 'NotAllowedError') { camDenied = true; setCamPerm('denied'); }
+    return;
+  }
   setCamPerm('granted');
   const v = document.createElement('video');
   v.srcObject = camStream; v.muted = true; v.playsInline = true;
@@ -2857,7 +2853,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.0017';
+const BLIP_VERSION = '2026.10.17.0019';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
@@ -2922,11 +2918,16 @@ function syncUpdateRow(){
    short of the physical screen in an iOS home-screen app (at cold launch,
    or left shrunk after the keyboard), which floats the tab bar up the
    screen with a white strip under it — so every measurement the browser
-   offers is considered and the largest wins, and in an installed
-   (standalone) app in portrait the physical screen height is the floor:
-   the screen size never reports short. Re-measured whenever the viewport
-   settles; a shrink reported while a text field is focused is the
-   keyboard opening and is ignored, then re-measured after blur. */
+   offers is considered and the largest wins. In an installed (standalone)
+   app in portrait the app always fills the physical screen, so the
+   screen height is the height, unconditionally: an earlier version of
+   this floor only applied when the reported height was already above
+   55% of the screen, and a badly shrunk cold-launch report (~54%) fell
+   under that bar — the floor never engaged and the "tall white bar"
+   under the tab bar survived every fix aimed at the bar itself.
+   Re-measured whenever the viewport settles; a shrink reported while a
+   text field is focused is the keyboard opening and is ignored, then
+   re-measured after blur. */
 function fitStage(){
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
@@ -2936,16 +2937,17 @@ function fitStage(){
   if (window.visualViewport) h = Math.max(h, Math.round(window.visualViewport.height + window.visualViewport.offsetTop));
   const standalone = window.navigator.standalone === true ||
     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  if (standalone && window.screen && window.screen.height > h &&
-      window.innerWidth <= window.innerHeight && h > window.screen.height * 0.55) {
-    h = window.screen.height;
+  if (standalone && window.screen && window.screen.height >= window.screen.width) {
+    h = Math.max(h, window.screen.height);
   }
   if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
 }
-function fitStageSoon(){ fitStage(); setTimeout(fitStage, 150); setTimeout(fitStage, 500); }
+function fitStageSoon(){ fitStage(); setTimeout(fitStage, 150); setTimeout(fitStage, 500); setTimeout(fitStage, 1200); }
 window.addEventListener('resize', fitStage);
+window.addEventListener('load', fitStageSoon);
 window.addEventListener('orientationchange', fitStageSoon);
 window.addEventListener('pageshow', fitStageSoon);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) fitStageSoon(); });
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitStage);
 document.addEventListener('focusout', () => setTimeout(fitStage, 350));
 fitStageSoon();
