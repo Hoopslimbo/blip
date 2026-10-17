@@ -43,7 +43,8 @@ try {
   --danger:#e72b4e;
   --shadow:0 10px 34px rgba(15,16,20,.16);
   --ease:cubic-bezier(.22,.9,.32,1);
-  --tabbar-h:calc(42px + env(safe-area-inset-bottom));
+  --tabbar-pad:max(8px,env(safe-area-inset-bottom) - 16px);
+  --tabbar-h:calc(44px + var(--tabbar-pad));
   --head-h:calc(56px + env(safe-area-inset-top));
 }
 /* ---------- themes ----------
@@ -274,19 +275,24 @@ img{display:block}
 .f-act.msg:active{background:var(--yellow)}
 
 /* ---------- bottom nav ---------- */
-/* Compact bar: one slim content row (42px, see --tabbar-h) plus the
-   bottom safe-area inset and nothing else, so the strip hugs the bottom
-   edge of the screen. Tab content is vertically centered in that row —
-   never top-aligned — so no empty white band can open up under the
-   icons inside the bar. The bar is positioned with its own stacking
-   layer so it (and the raised camera button riding its top edge) always
-   paints above the scrolling pane instead of being sliced by it, and
-   the camera button is anchored to the bar's top edge with a transform
-   rather than a negative margin inside the flex row — the old in-flow
-   overflow is what got clipped flush with the bar. */
+/* Low, slim bar: one 44px content row plus a shortened slice of the
+   bottom safe-area inset underneath it (see --tabbar-pad: the inset
+   minus 16px, floored at 8px). Reserving the full inset below the row
+   left the icons floating high with a tall empty band under them;
+   trimming it drops the icons toward the bottom edge and shortens
+   the whole strip, while the bar's background still runs to the very
+   bottom of the screen and the icons stay clear of the home
+   indicator. Tab content is vertically centered in the row — never
+   top-aligned — so no empty band can open up inside the bar.
+   The bar is positioned with its own stacking layer so it (and the
+   raised camera button riding its top edge) always paints above the
+   scrolling pane instead of being sliced by it, and the camera button
+   is anchored to the bar's top edge with a transform rather than a
+   negative margin inside the flex row — the old in-flow overflow is
+   what got clipped flush with the bar. */
 #tabbar{
   position:relative;z-index:10;
-  height:var(--tabbar-h);padding-bottom:env(safe-area-inset-bottom);
+  height:var(--tabbar-h);padding-bottom:var(--tabbar-pad);
   display:flex;align-items:stretch;background:var(--bg);border-top:1px solid var(--line);flex:none;
 }
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--ink3);font-size:10px;font-weight:700}
