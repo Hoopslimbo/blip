@@ -246,7 +246,7 @@ img{display:block}
 .ring-wrap{position:relative}
 .story-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:2px 16px 20px}
 .story-card{border-radius:16px;overflow:hidden;position:relative;aspect-ratio:3/4.1;background:#222;cursor:pointer;text-align:left;width:100%}
-.story-card img.ph{width:100%;height:100%;object-fit:cover}
+.story-card img.ph,.story-card video.ph{width:100%;height:100%;object-fit:cover}
 .story-card .sc-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.34),transparent 42%,transparent 62%,rgba(0,0,0,.5))}
 .story-card .sc-who{position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:7px;color:#fff}
 .story-card .sc-who .avatar{width:30px;height:30px;font-size:13px;border:2px solid rgba(255,255,255,.85)}
@@ -330,6 +330,14 @@ img{display:block}
 .shutter::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#fff;transition:transform .1s,background .15s}
 .shutter:active{transform:scale(.94)}
 .shutter:active::after{background:var(--yellow)}
+/* The shutter is press-and-hold for video: it must never select,
+   highlight, or pop the iOS long-press callout while held. */
+.shutter{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.shutter.recording{border-color:#ff3b30}
+.shutter.recording::after{background:#ff3b30;transform:scale(.58);border-radius:34%}
+#rec-bar{align-self:center;display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.45);color:#fff;font-weight:800;font-size:14.5px;padding:7px 14px;border-radius:999px;backdrop-filter:blur(3px)}
+#rec-bar .rec-dot{width:9px;height:9px;border-radius:50%;background:#ff3b30;animation:recPulse 1s ease-in-out infinite;flex:none}
+@keyframes recPulse{0%,100%{opacity:1}50%{opacity:.2}}
 .cam-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;text-align:center;padding:30px;z-index:3;background:rgba(0,0,0,.25)}
 .cam-msg p{margin:0;font-size:16px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.7)}
 .btn-white{background:#fff;color:#000;border-radius:999px;padding:13px 26px;font-weight:800;font-size:15px}
@@ -366,6 +374,11 @@ img{display:block}
 .edit-tool-btn{flex:none;display:flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.16);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700}
 .edit-tool-btn svg{width:16px;height:16px}
 .edit-bottom{flex:none;display:flex;justify-content:flex-end;padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
+#edit-video{display:block;border-radius:4px;background:#111;touch-action:none}
+#edit-draw{position:absolute;left:0;top:0;touch-action:none}
+.edit-export{position:absolute;inset:0;z-index:6;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff}
+.edit-export p{margin:0;font-size:15.5px;font-weight:700}
+.edit-export .spinner{width:26px;height:26px}
 
 /* ---------- profile photo / banner positioner ---------- */
 #screen-crop{z-index:65;background:#000}
@@ -509,6 +522,7 @@ img{display:block}
 /* ---------- fullscreen viewers ---------- */
 .fs-view{position:absolute;inset:0;z-index:50;background:#000;display:flex;flex-direction:column}
 .fs-view img.full{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.fs-view video.full{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .fs-top{position:relative;z-index:3;padding-top:calc(10px + env(safe-area-inset-top));padding-left:12px;padding-right:12px}
 .segbar{display:flex;gap:5px;margin-bottom:10px}
 .segbar .seg{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.35);overflow:hidden}
@@ -629,9 +643,10 @@ img{display:block}
         <button id="btn-cam-start" class="btn-white">Turn On Camera</button>
       </div>
       <div class="cam-bottom">
+        <div id="rec-bar" class="hidden"><span class="rec-dot"></span><span id="rec-time">0:00</span></div>
         <div class="cam-actions">
           <div class="cam-side" aria-hidden="true"></div>
-          <button id="btn-shutter" class="shutter" aria-label="Take photo"></button>
+          <button id="btn-shutter" class="shutter" aria-label="Take photo — hold to record video"></button>
           <div class="cam-side" aria-hidden="true"></div>
         </div>
       </div>
@@ -758,6 +773,8 @@ img{display:block}
     <div class="edit-stage" id="edit-stage">
       <div class="edit-wrap" id="edit-wrap">
         <canvas id="edit-canvas"></canvas>
+        <video id="edit-video" class="hidden" playsinline loop></video>
+        <canvas id="edit-draw" class="hidden"></canvas>
         <div id="edit-texts"></div>
       </div>
     </div>
@@ -766,6 +783,7 @@ img{display:block}
     <div class="edit-bottom">
       <button class="btn-white" id="btn-edit-done">Send</button>
     </div>
+    <div id="edit-export" class="edit-export hidden"><div class="spinner"></div><p id="edit-export-txt">Preparing Video…</p></div>
   </div>
 
   <!-- ============ PHOTO / BANNER POSITIONER ============ -->
@@ -800,6 +818,7 @@ img{display:block}
       <div class="grab"></div>
       <h3>Send To</h3>
       <img id="send-preview" class="send-preview" alt="Your photo">
+      <video id="send-preview-video" class="send-preview hidden" playsinline loop muted></video>
       <div class="scroll" id="send-list"></div>
       <div class="stack">
         <button class="btn-block btn-ink" id="btn-send-story">Post to My Story</button>
@@ -888,6 +907,7 @@ img{display:block}
   <!-- ============ STORY VIEWER ============ -->
   <div id="screen-story" class="fs-view hidden">
     <img id="story-img" class="full" alt="Story">
+    <video id="story-video" class="full hidden" playsinline></video>
     <div class="tapzone l" id="story-tap-left"></div>
     <div class="tapzone r" id="story-tap-right"></div>
     <div class="fs-top">
@@ -908,6 +928,7 @@ img{display:block}
   <!-- ============ PHOTO VIEWER ============ -->
   <div id="screen-photo" class="fs-view hidden">
     <img id="photo-img" class="full" alt="Photo message">
+    <video id="photo-video" class="full hidden" playsinline controls></video>
     <div class="fs-top">
       <div class="fs-who">
         <span id="photo-avatar"></span>
@@ -1056,6 +1077,13 @@ let camFlipping = false;     // a camera flip is landing — extra flip taps are
 let camTicking = false;      // the preview draw loop is alive (there is never more than one)
 let storyState = { who: null, items: [], idx: 0, timer: null };
 let photoReturn = null;       // where to go after closing a photo message
+/* Media URLs for videos carry a trailing marker: blip_messages and
+   blip_stories have only an image_url column, so a stored video URL is
+   the file URL plus this fragment. The fragment never reaches the
+   storage server; it just lets every viewer tell video from photo. */
+const VIDEO_MARK = '#blip-video';
+function isVideoUrl(u){ return typeof u === 'string' && u.slice(-VIDEO_MARK.length) === VIDEO_MARK; }
+function cleanMediaUrl(u){ return isVideoUrl(u) ? u.slice(0, -VIDEO_MARK.length) : u; }
 
 /* ---------- helpers ---------- */
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1893,8 +1921,13 @@ function bubble(m, gap){
     const seen = mine || (openedMap[m.sender_id] && new Date(m.created_at) <= new Date(openedMap[m.sender_id]));
     const card = document.createElement('div');
     card.className = 'photo-card' + (seen ? ' seen' : '');
-    card.innerHTML = '<span class="photo-ico">' + IC.photoSq + '</span><span><b>' + (mine ? 'Photo Message' : 'New Message') + '</b><small>' + (seen ? 'Opened · ' : 'Tap to view · ') + relTime(m.created_at) + '</small></span>';
-    card.onclick = () => openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
+    if (isVideoUrl(m.image_url)) {
+      card.innerHTML = '<span class="photo-ico">' + IC.play + '</span><span><b>' + (mine ? 'Video Message' : 'New Video') + '</b><small>' + (seen ? 'Opened · ' : 'Tap to watch · ') + relTime(m.created_at) + '</small></span>';
+      card.onclick = () => openVideoMessage(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
+    } else {
+      card.innerHTML = '<span class="photo-ico">' + IC.photoSq + '</span><span><b>' + (mine ? 'Photo Message' : 'New Message') + '</b><small>' + (seen ? 'Opened · ' : 'Tap to view · ') + relTime(m.created_at) + '</small></span>';
+      card.onclick = () => openPhoto(m, mine ? me : (profilesCache[m.sender_id] || threadOther));
+    }
     row.appendChild(card);
   }
   if (m.body) {
@@ -1927,14 +1960,39 @@ async function sendMessage(receiverId, body, imageUrl){
 /* ---------- photo message viewer ---------- */
 function openPhoto(m, who){
   photoReturn = threadOther;
-  $('photo-img').src = m.image_url;
+  const pv = $('photo-video');
+  try { pv.pause(); } catch (e) {}
+  pv.removeAttribute('src'); pv.classList.add('hidden');
+  $('photo-img').classList.remove('hidden');
+  $('photo-img').src = cleanMediaUrl(m.image_url);
   $('photo-who').textContent = (who && who.display_name) || 'Photo';
   $('photo-when').textContent = fullTime(m.created_at);
   $('photo-avatar').innerHTML = who ? avatarHTML(who, 'sm') : '';
   if (m.sender_id !== me.id) markOpened(m.sender_id);
   show($('screen-photo'));
 }
-function closePhoto(){ hide($('screen-photo')); $('photo-img').src = ''; }
+function openVideoMessage(m, who){
+  photoReturn = threadOther;
+  $('photo-img').src = '';
+  $('photo-img').classList.add('hidden');
+  const pv = $('photo-video');
+  pv.classList.remove('hidden');
+  pv.src = cleanMediaUrl(m.image_url);
+  $('photo-who').textContent = (who && who.display_name) || 'Video';
+  $('photo-when').textContent = fullTime(m.created_at);
+  $('photo-avatar').innerHTML = who ? avatarHTML(who, 'sm') : '';
+  if (m.sender_id !== me.id) markOpened(m.sender_id);
+  show($('screen-photo'));
+  pv.play().catch(() => {});
+}
+function closePhoto(){
+  hide($('screen-photo'));
+  $('photo-img').src = '';
+  const pv = $('photo-video');
+  try { pv.pause(); } catch (e) {}
+  pv.removeAttribute('src'); pv.classList.add('hidden');
+  $('photo-img').classList.remove('hidden');
+}
 function wirePhoto(){
   $('btn-photo-close').onclick = closePhoto;
   $('btn-photo-reply').onclick = () => {
@@ -1969,7 +2027,7 @@ function subscribeRealtime(){
 
 /* ---------- camera ---------- */
 function wireCamera(){
-  $('btn-shutter').onclick = capturePhoto;
+  wireShutter();
   // Tapping "Turn On Camera" clears the denial latch (session and
   // remembered) and requests access inside that tap's user activation —
   // the way back in after a refusal. Everywhere else the app simply
@@ -1988,7 +2046,8 @@ function wireCamera(){
      dead stream being discovered (and re-asked about) on some later
      start. During a call the call owns the camera — leave it alone. */
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden || callState || activeView !== 'view-camera') return;
+    if (document.hidden) { if (recState) stopRecording(); return; }
+    if (callState || activeView !== 'view-camera') return;
     if (!camStream) { startCamera(); return; }
     const vt = camStream.getVideoTracks()[0];
     if (!vt || vt.readyState === 'ended') { camStream = null; window._blipVideo = null; startCamera(); }
@@ -2081,6 +2140,13 @@ async function openCameraStream(gen){
     stream.getTracks().forEach(t => t.stop());
     return;
   }
+  publishCamStream(stream);
+}
+/* Make a freshly acquired stream the camera's live stream: remember
+   the grant, revive-on-track-end, and paint it into the preview. Used
+   by normal camera starts and by video recording, which swaps the
+   preview over to its audio+video stream. */
+async function publishCamStream(stream){
   camStream = stream;
   setCamPerm('granted');
   // If iOS ends the track mid-session (another app grabs the camera,
@@ -2088,13 +2154,13 @@ async function openCameraStream(gen){
   // camera view is up — WebKit re-asks for permission once capture
   // has been stopped for about a minute, so a dead stream left
   // sitting is a guaranteed prompt on the next start.
-  const vt0 = camStream.getVideoTracks()[0];
+  const vt0 = stream.getVideoTracks()[0];
   if (vt0) vt0.onended = () => {
     if (callState || activeView !== 'view-camera' || document.hidden) return;
     if (camStream && camStream.getVideoTracks()[0] === vt0) { camStream = null; window._blipVideo = null; startCamera(); }
   };
   const v = document.createElement('video');
-  v.srcObject = camStream; v.muted = true; v.playsInline = true;
+  v.srcObject = stream; v.muted = true; v.playsInline = true;
   try { await v.play(); } catch (e) {}
   window._blipVideo = v;
   camRunning = true;
@@ -2118,7 +2184,7 @@ async function openCameraStream(gen){
    reverts to the camera that works instead of stranding the preview
    on the off state. */
 async function flipCamera(){
-  if (camFlipping || callState) return;
+  if (camFlipping || callState || recState) return;
   camFlipping = true;
   const prev = facing;
   facing = prev === 'user' ? 'environment' : 'user';
@@ -2160,6 +2226,7 @@ function camTick(){
   requestAnimationFrame(camTick);
 }
 function capturePhoto(){
+  if (recState) return;
   if (camFlipping) return; // mid-flip the canvas still holds the old camera's last frame
   const canvas = $('cam-canvas');
   if (!canvas.width) { show($('cam-off')); return; }
@@ -2171,6 +2238,120 @@ async function uploadImage(blob){
   const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
   if (error) { toast('Upload failed: ' + error.message); return null; }
   return sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
+}
+async function uploadMedia(blob){
+  const type = (blob.type || 'video/mp4').split(';')[0];
+  const ext = type.indexOf('webm') !== -1 ? 'webm' : 'mp4';
+  const path = me.id + '/' + Date.now() + '.' + ext;
+  const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: type });
+  if (error) { toast('Upload failed: ' + error.message); return null; }
+  return sb.storage.from('blip-media').getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- video recording: hold the shutter ----------
+   A quick tap on the shutter still takes a photo. Holding it past a
+   short threshold starts a MediaRecorder capture (up to 30 seconds)
+   and releasing stops it; the clip then opens in the same editor as
+   photos. Recording needs the microphone too, so it asks for an
+   audio+video stream and swaps the preview onto it — the old
+   video-only stream is released, never stacked. If the mic is
+   refused, it falls back to recording the silent preview stream
+   rather than failing outright. */
+const REC_MAX_MS = 30000;
+const REC_HOLD_MS = 250;
+let recState = null;    // in-flight / active recording
+let shutterPress = null;
+function pickRecMime(){
+  if (typeof MediaRecorder === 'undefined') return '';
+  const cands = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', ''];
+  for (const c of cands) { if (!c || MediaRecorder.isTypeSupported(c)) return c; }
+  return '';
+}
+function wireShutter(){
+  const btn = $('btn-shutter');
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); // no long-press highlight / callout while holding
+    if (callState || camFlipping || shutterPress || recState) return;
+    try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+    const press = { timer: null, fired: false };
+    shutterPress = press;
+    press.timer = setTimeout(() => {
+      if (shutterPress !== press) return;
+      press.fired = true;
+      startRecording();
+    }, REC_HOLD_MS);
+  });
+  const release = () => {
+    const press = shutterPress;
+    if (!press) return;
+    shutterPress = null;
+    clearTimeout(press.timer);
+    if (recState) stopRecording();
+    else if (!press.fired) capturePhoto();
+    // (fired but still starting: startRecording sees the release via
+    // recState.stopWanted and stops the moment the recorder is live.)
+  };
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+async function startRecording(){
+  if (recState) return;
+  if (typeof MediaRecorder === 'undefined') { toast('Video recording is not supported on this device'); return; }
+  if (!camStream || !camStream.getVideoTracks().length) { show($('cam-off')); return; }
+  const rec = { mr: null, chunks: [], mime: '', startedAt: 0, timer: null, autoTimer: null, stopWanted: false };
+  recState = rec;
+  let stream = null;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints(), audio: true }); }
+  catch (e) { stream = null; }
+  if (recState !== rec) return;
+  if (stream) {
+    // Swap the preview onto the recording stream so what you see is
+    // what's being recorded (same facing, now with the mic live).
+    stopCamera();
+    await publishCamStream(stream);
+    if (recState !== rec) return;
+  } else {
+    stream = camStream; // mic refused: record the video-only preview stream
+  }
+  let mr = null;
+  try {
+    const mime = pickRecMime();
+    mr = mime ? new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 2500000 }) : new MediaRecorder(stream);
+  } catch (e) { mr = null; }
+  if (!mr) { recState = null; toast('Video recording is not supported on this device'); return; }
+  rec.mr = mr;
+  rec.mime = mr.mimeType || 'video/mp4';
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+  mr.onstop = () => finishRecording(rec);
+  try { mr.start(250); } catch (e) { recState = null; toast('Video recording is not supported on this device'); return; }
+  rec.startedAt = Date.now();
+  $('btn-shutter').classList.add('recording');
+  $('rec-time').textContent = '0:00';
+  show($('rec-bar'));
+  rec.timer = setInterval(() => { $('rec-time').textContent = fmtDur(Math.floor((Date.now() - rec.startedAt) / 1000)); }, 200);
+  rec.autoTimer = setTimeout(() => { if (recState === rec) stopRecording(); }, REC_MAX_MS);
+  if (rec.stopWanted || !shutterPress) stopRecording();
+}
+function stopRecording(){
+  const rec = recState; if (!rec) return;
+  if (!rec.mr) { rec.stopWanted = true; return; }
+  clearTimeout(rec.autoTimer);
+  if (rec.mr.state !== 'inactive') { try { rec.mr.stop(); } catch (e) { finishRecording(rec); } }
+}
+function finishRecording(rec){
+  if (recState !== rec) return;
+  recState = null;
+  clearInterval(rec.timer); clearTimeout(rec.autoTimer);
+  $('btn-shutter').classList.remove('recording');
+  hide($('rec-bar'));
+  const dur = rec.startedAt ? (Date.now() - rec.startedAt) / 1000 : 0;
+  const type = (rec.mime || 'video/mp4').split(';')[0];
+  const blob = new Blob(rec.chunks, { type });
+  // A stray tap that tipped over the hold threshold (or an empty
+  // capture) isn't a video — drop it quietly back to the camera.
+  if (!rec.chunks.length || dur < 0.6 || blob.size < 4096) { toast('Hold the button to record a video'); return; }
+  openVideoEditor(blob);
 }
 
 /* ---------- photo editor: Snapchat-style text + freehand drawing ----------
@@ -2208,6 +2389,11 @@ function wireEditor(){
   cv.addEventListener('pointermove', onDrawMove);
   cv.addEventListener('pointerup', onDrawEnd);
   cv.addEventListener('pointercancel', onDrawEnd);
+  const dc = $('edit-draw');
+  dc.addEventListener('pointerdown', onDrawStart);
+  dc.addEventListener('pointermove', onDrawMove);
+  dc.addEventListener('pointerup', onDrawEnd);
+  dc.addEventListener('pointercancel', onDrawEnd);
   $('edit-stage').addEventListener('pointerdown', (e) => {
     if (e.target === $('edit-stage') || e.target === $('edit-wrap') || e.target === $('edit-texts')) {
       if (editingText) endInlineEdit();
@@ -2219,8 +2405,11 @@ function openEditor(source){
   const base = document.createElement('canvas');
   base.width = source.width; base.height = source.height;
   base.getContext('2d').drawImage(source, 0, 0);
-  editState = { base, strokes: [], texts: [], selected: null, drawing: false, penColor: '#ffffff', current: null, dispW: 0 };
+  editState = { kind: 'photo', base, strokes: [], texts: [], selected: null, drawing: false, penColor: '#ffffff', current: null, dispW: 0 };
   editingText = null;
+  $('edit-canvas').classList.remove('hidden');
+  $('edit-video').classList.add('hidden');
+  $('edit-draw').classList.add('hidden');
   $('edit-texts').innerHTML = '';
   $('edit-texts').classList.remove('locked');
   $('edit-fonts').classList.add('hidden');
@@ -2240,15 +2429,61 @@ function openEditor(source){
   redrawEditCanvas();
   updateEditorTools();
 }
+/* The same editor, opened on a recorded clip: the video plays in the
+   photo's place (looping), text overlays work exactly as on photos,
+   and drawing paints onto a transparent canvas laid over the video —
+   Send flattens it all into the clip (see compositeVideo). */
+function openVideoEditor(blob){
+  const url = URL.createObjectURL(blob);
+  const v = $('edit-video');
+  v.onerror = () => { URL.revokeObjectURL(url); toast('Could not open that video'); };
+  v.src = url;
+  const begin = () => {
+    const W = v.videoWidth || 720, H = v.videoHeight || 1280;
+    editState = { kind: 'video', base: null, blob, videoUrl: url, strokes: [], texts: [], selected: null, drawing: false, penColor: '#ffffff', current: null, dispW: 0 };
+    editingText = null;
+    $('edit-texts').innerHTML = '';
+    $('edit-texts').classList.remove('locked');
+    $('edit-fonts').classList.add('hidden');
+    $('edit-canvas').classList.add('hidden');
+    v.classList.remove('hidden');
+    const dc = $('edit-draw');
+    dc.classList.remove('hidden');
+    dc.width = W; dc.height = H;
+    show($('screen-editor'));
+    const stage = $('edit-stage');
+    const availW = stage.clientWidth || window.innerWidth;
+    const availH = stage.clientHeight || Math.max(200, window.innerHeight - 200);
+    const s = Math.min(availW / W, availH / H);
+    const dispW = Math.max(60, Math.round(W * s));
+    const dispH = Math.max(60, Math.round(H * s));
+    v.style.width = dispW + 'px'; v.style.height = dispH + 'px';
+    dc.style.width = dispW + 'px'; dc.style.height = dispH + 'px';
+    $('edit-wrap').style.width = dispW + 'px'; $('edit-wrap').style.height = dispH + 'px';
+    editState.dispW = dispW;
+    v.loop = true;
+    v.muted = false;
+    v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    redrawEditCanvas();
+    updateEditorTools();
+  };
+  if (v.readyState >= 1 && v.videoWidth) begin();
+  else v.addEventListener('loadedmetadata', begin, { once: true });
+}
 function closeEditor(){
   if (editingText) endInlineEdit();
+  if (editState && editState.kind === 'video') {
+    const v = $('edit-video');
+    try { v.pause(); } catch (e) {}
+    v.removeAttribute('src');
+    try { v.load(); } catch (e) {}
+    URL.revokeObjectURL(editState.videoUrl);
+  }
   hide($('screen-editor'));
   editState = null; editingText = null;
 }
-function redrawEditCanvas(){
+function drawStrokesOn(ctx){
   if (!editState) return;
-  const cv = $('edit-canvas'), ctx = cv.getContext('2d');
-  ctx.drawImage(editState.base, 0, 0);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   editState.strokes.forEach(st => {
     ctx.strokeStyle = st.color; ctx.lineWidth = st.width;
@@ -2257,6 +2492,19 @@ function redrawEditCanvas(){
     if (st.points.length === 1) ctx.lineTo(st.points[0].x + 0.1, st.points[0].y + 0.1);
     ctx.stroke();
   });
+}
+function redrawEditCanvas(){
+  if (!editState) return;
+  if (editState.kind === 'video') {
+    // Strokes float on the transparent canvas over the playing video.
+    const dc = $('edit-draw'), ctx = dc.getContext('2d');
+    ctx.clearRect(0, 0, dc.width, dc.height);
+    drawStrokesOn(ctx);
+  } else {
+    const cv = $('edit-canvas'), ctx = cv.getContext('2d');
+    ctx.drawImage(editState.base, 0, 0);
+    drawStrokesOn(ctx);
+  }
   $('btn-edit-undo').disabled = !editState.strokes.length;
 }
 function updateEditorTools(){
@@ -2447,17 +2695,19 @@ function toggleDrawMode(){
   $('edit-texts').classList.toggle('locked', es.drawing);
   updateEditorTools();
 }
+function editSurface(){ return (editState && editState.kind === 'video') ? $('edit-draw') : $('edit-canvas'); }
 function canvasPoint(e){
-  const cv = $('edit-canvas'), r = cv.getBoundingClientRect();
+  const cv = editSurface(), r = cv.getBoundingClientRect();
   return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
 }
 function onDrawStart(e){
   const es = editState;
   if (!es || !es.drawing) return;
   e.preventDefault();
-  const st = { color: es.penColor, width: Math.max(3, Math.round($('edit-canvas').width * 0.011)), points: [canvasPoint(e)] };
+  const surf = editSurface();
+  const st = { color: es.penColor, width: Math.max(3, Math.round(surf.width * 0.011)), points: [canvasPoint(e)] };
   es.strokes.push(st); es.current = st;
-  try { $('edit-canvas').setPointerCapture(e.pointerId); } catch (err) {}
+  try { surf.setPointerCapture(e.pointerId); } catch (err) {}
   redrawEditCanvas();
 }
 function onDrawMove(e){
@@ -2518,6 +2768,7 @@ async function finishEditor(){
   if (!editState) return;
   if (editingText) endInlineEdit();
   if (!editState) return;
+  if (editState.kind === 'video') return finishVideoEditor();
   const out = document.createElement('canvas');
   out.width = editState.base.width; out.height = editState.base.height;
   const ctx = out.getContext('2d');
@@ -2531,13 +2782,103 @@ async function finishEditor(){
   if (url) openSendSheet(url);
 }
 
+/* Send for a video: with no edits the recorded file uploads as-is.
+   With text or drawing on it, the edits are baked in by playing the
+   clip once through a canvas — video frame, then strokes, then text,
+   exactly as they sit in the editor — and recording that canvas (plus
+   the clip's own audio track when the browser will hand it over). */
+async function finishVideoEditor(){
+  const es = editState; if (!es) return;
+  let blob = es.blob;
+  const hasEdits = es.strokes.length > 0 || es.texts.some(t => t.text);
+  if (hasEdits) {
+    const baked = await compositeVideo(es);
+    if (baked) blob = baked;
+    else toast('Could not add the edits — sending the original video');
+  }
+  closeEditor();
+  toast('Uploading Video…');
+  const url = await uploadMedia(blob);
+  if (url) openSendSheet(url + VIDEO_MARK);
+}
+function compositeVideo(es){
+  return new Promise((resolve) => {
+    const v = $('edit-video');
+    const W = v.videoWidth || 0, H = v.videoHeight || 0;
+    const cnv = document.createElement('canvas');
+    if (!W || !H || typeof cnv.captureStream !== 'function' || typeof MediaRecorder === 'undefined') { resolve(null); return; }
+    cnv.width = W; cnv.height = H;
+    const ctx = cnv.getContext('2d');
+    let stream;
+    try { stream = cnv.captureStream(30); } catch (e) { resolve(null); return; }
+    try {
+      const vs = v.captureStream ? v.captureStream() : (v.mozCaptureStream ? v.mozCaptureStream() : null);
+      if (vs) vs.getAudioTracks().forEach(t => stream.addTrack(t));
+    } catch (e) {}
+    let mr = null;
+    try {
+      const mime = pickRecMime();
+      mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    } catch (e) { mr = null; }
+    if (!mr) { resolve(null); return; }
+    const chunks = [];
+    let done = false, raf = 0;
+    const overlay = $('edit-export'), otxt = $('edit-export-txt');
+    const finish = () => {
+      if (done) return; done = true;
+      cancelAnimationFrame(raf);
+      overlay.classList.add('hidden');
+      try { v.pause(); } catch (e) {}
+      const type = (mr.mimeType || 'video/mp4').split(';')[0];
+      resolve(chunks.length ? new Blob(chunks, { type }) : null);
+    };
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = finish;
+    const drawFrame = () => {
+      if (done) return;
+      ctx.drawImage(v, 0, 0, W, H);
+      drawStrokesOn(ctx);
+      es.texts.forEach(t => { if (t.text) drawTextExport(ctx, t, W, H); });
+      const d = v.duration || 0;
+      otxt.textContent = 'Preparing Video…' + (d ? ' ' + Math.min(99, Math.floor((v.currentTime / d) * 100)) + '%' : '');
+      raf = requestAnimationFrame(drawFrame);
+    };
+    overlay.classList.remove('hidden');
+    otxt.textContent = 'Preparing Video…';
+    v.loop = false;
+    v.muted = false;
+    v.addEventListener('ended', () => { try { mr.stop(); } catch (e) { finish(); } }, { once: true });
+    setTimeout(() => { if (!done) { try { mr.stop(); } catch (e) { finish(); } } }, ((v.duration || 30) + 10) * 1000);
+    const go = () => {
+      try { mr.start(250); } catch (e) { finish(); return; }
+      drawFrame();
+      v.play().catch(() => { try { mr.stop(); } catch (e) { finish(); } });
+    };
+    try { v.currentTime = 0; } catch (e) {}
+    if (v.readyState >= 3) go();
+    else v.addEventListener('canplay', go, { once: true });
+  });
+}
+
 /* ---------- send sheet ---------- */
+function stopSendPreview(){
+  const pv = $('send-preview-video');
+  try { pv.pause(); } catch (e) {}
+  pv.removeAttribute('src');
+  try { pv.load(); } catch (e) {}
+}
 function wireSendSheet(){
-  $('btn-send-cancel').onclick = () => hide($('sheet-send'));
-  $('sheet-send').addEventListener('click', (e) => { if (e.target === $('sheet-send')) hide($('sheet-send')); });
+  $('btn-send-cancel').onclick = () => { stopSendPreview(); hide($('sheet-send')); };
+  $('sheet-send').addEventListener('click', (e) => { if (e.target === $('sheet-send')) { stopSendPreview(); hide($('sheet-send')); } });
 }
 async function openSendSheet(imageUrl){
-  $('send-preview').src = imageUrl;
+  const vid = isVideoUrl(imageUrl);
+  const clean = cleanMediaUrl(imageUrl);
+  $('send-preview').classList.toggle('hidden', vid);
+  const pv = $('send-preview-video');
+  pv.classList.toggle('hidden', !vid);
+  if (vid) { pv.src = clean; pv.play().catch(() => {}); }
+  else { $('send-preview').src = clean; stopSendPreview(); }
   const list = $('send-list');
   list.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">Loading friends…</p>';
   show($('sheet-send'));
@@ -2551,6 +2892,7 @@ async function openSendSheet(imageUrl){
     r.className = 'pick-row';
     r.innerHTML = avatarHTML(other, 'sm') + '<div class="row-main"><b>' + esc(other.display_name) + '</b><span>@' + esc(other.username) + '</span></div>';
     r.onclick = async () => {
+      stopSendPreview();
       hide($('sheet-send'));
       await sendMessage(other.id, '', imageUrl);
       openThread(other);
@@ -2559,6 +2901,7 @@ async function openSendSheet(imageUrl){
   });
   if (!people.length) list.innerHTML = '<p style="color:var(--ink2);font-size:14px;padding:6px 2px">No friends yet — add a friend first, or post it to your story.</p>';
   $('btn-send-story').onclick = async () => {
+    stopSendPreview();
     hide($('sheet-send'));
     const { error } = await sb.from('blip_stories').insert({
       user_id: me.id, image_url: imageUrl,
@@ -2605,7 +2948,10 @@ async function loadStories(){
   if (mine) {
     const viewChip = document.createElement('div');
     viewChip.className = 'story-chip';
-    viewChip.innerHTML = '<div class="ring yellow"><div class="ring-inner"><img src="' + esc(mine[0].image_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div></div><span>' + relTime(mine[0].created_at) + ' ago</span>';
+    const firstMedia = isVideoUrl(mine[0].image_url)
+      ? '<video src="' + esc(cleanMediaUrl(mine[0].image_url)) + '" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></video>'
+      : '<img src="' + esc(mine[0].image_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    viewChip.innerHTML = '<div class="ring yellow"><div class="ring-inner">' + firstMedia + '</div></div><span>' + relTime(mine[0].created_at) + ' ago</span>';
     viewChip.onclick = () => openStoryViewer(me, mine);
     strip.appendChild(viewChip);
   }
@@ -2619,7 +2965,10 @@ async function loadStories(){
     const latest = stories[0];
     const card = document.createElement('button');
     card.className = 'story-card';
-    card.innerHTML = '<img class="ph" src="' + esc(latest.image_url) + '" alt="Story by ' + esc(p.display_name) + '">' +
+    const latestMedia = isVideoUrl(latest.image_url)
+      ? '<video class="ph" src="' + esc(cleanMediaUrl(latest.image_url)) + '" muted playsinline preload="metadata"></video>'
+      : '<img class="ph" src="' + esc(latest.image_url) + '" alt="Story by ' + esc(p.display_name) + '">';
+    card.innerHTML = latestMedia +
       '<div class="sc-shade"></div>' +
       '<div class="sc-who">' + avatarHTML(p, 'sm') + '<b>' + esc(p.display_name) + '</b></div>' +
       '<div class="sc-when">' + relTime(latest.created_at) + ' ago</div>' +
@@ -2641,7 +2990,19 @@ function renderStorySeg(){
   $('story-who').textContent = who.display_name || who.username;
   $('story-when').textContent = relTime(s.created_at) + ' ago';
   $('story-avatar').innerHTML = avatarHTML(who, 'sm');
-  $('story-img').src = s.image_url;
+  const vid = isVideoUrl(s.image_url);
+  const sv = $('story-video');
+  $('story-img').classList.toggle('hidden', vid);
+  sv.classList.toggle('hidden', !vid);
+  sv.onloadedmetadata = null;
+  if (vid) {
+    sv.src = cleanMediaUrl(s.image_url);
+    sv.play().catch(() => {});
+  } else {
+    try { sv.pause(); } catch (e) {}
+    sv.removeAttribute('src');
+    $('story-img').src = s.image_url;
+  }
   $('btn-story-del').classList.toggle('hidden', who.id !== me.id);
   $('story-reply-bar').classList.toggle('hidden', who.id === me.id);
   const prog = $('story-progress'); prog.innerHTML = '';
@@ -2650,14 +3011,29 @@ function renderStorySeg(){
     seg.innerHTML = '<i style="width:' + (i < idx ? 100 : 0) + '%"></i>';
     prog.appendChild(seg);
   });
+  if (vid) {
+    // A video story runs for the clip's own length, not the photo 5s.
+    if (isFinite(sv.duration) && sv.duration > 0) armStoryTimer(sv.duration * 1000);
+    else {
+      armStoryTimer(5000);
+      sv.onloadedmetadata = () => { if (storyState.items[storyState.idx] === s && isFinite(sv.duration) && sv.duration > 0) armStoryTimer(sv.duration * 1000); };
+    }
+  } else armStoryTimer(5000);
+}
+/* (Re)start the current segment's progress bar + auto-advance timer. */
+function armStoryTimer(ms){
+  const { items, idx } = storyState;
+  const prog = $('story-progress');
+  const bar = prog.children[idx] && prog.children[idx].firstChild;
   clearTimeout(storyState.timer);
-  const bar = prog.children[idx].firstChild;
-  bar.style.transition = 'none'; bar.style.width = '0';
-  requestAnimationFrame(() => { bar.style.transition = 'width 5s linear'; bar.style.width = '100%'; });
+  if (bar) {
+    bar.style.transition = 'none'; bar.style.width = '0';
+    requestAnimationFrame(() => { bar.style.transition = 'width ' + ms + 'ms linear'; bar.style.width = '100%'; });
+  }
   storyState.timer = setTimeout(() => {
     if (storyState.idx + 1 < storyState.items.length) { storyState.idx++; renderStorySeg(); }
     else closeStoryViewer();
-  }, 5000);
+  }, ms);
 }
 async function deleteCurrentStory(){
   const s = storyState.items[storyState.idx];
@@ -2670,7 +3046,13 @@ async function deleteCurrentStory(){
   if (storyState.idx >= storyState.items.length) storyState.idx = storyState.items.length - 1;
   renderStorySeg(); loadStories();
 }
-function closeStoryViewer(){ clearTimeout(storyState.timer); hide($('screen-story')); }
+function closeStoryViewer(){
+  clearTimeout(storyState.timer);
+  const sv = $('story-video');
+  try { sv.pause(); } catch (e) {}
+  sv.removeAttribute('src'); sv.onloadedmetadata = null;
+  hide($('screen-story'));
+}
 
 /* ---------- calls: 1:1 voice & video (WebRTC, signaling over Supabase Realtime) ---------- */
 const RTC_CFG = { iceServers: [
@@ -3131,7 +3513,7 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.1412';
+const BLIP_VERSION = '2026.10.17.1445';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
