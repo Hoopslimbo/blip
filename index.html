@@ -3513,11 +3513,22 @@ async function sendCallPush(other, type){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.1445';
+const BLIP_VERSION = '2026.10.17.1500';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
 let updateCheckState = 'idle'; // idle | current | error — "available" lives in updateAvailable
+let latestVersion = null;
+/* Loop guard: the Update button navigates to this same page with
+   ?v=<version being chased>. If that freshly fetched page STILL doesn't
+   carry the chased version, reloading again would land on the exact same
+   page and the banner would come back forever (the old bug: version.json
+   is always fetched fresh, but a plain location.reload() could keep
+   serving the cached page with its old embedded stamp). So a version we
+   already chased is never offered again from this page. The marker lives
+   in the URL, not storage, and is stripped as soon as it is read. */
+const chasedVersion = (() => { try { return new URLSearchParams(location.search).get('v'); } catch (e) { return null; } })();
+if (chasedVersion) { try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {} }
 async function fetchLatestVersion(){
   try {
     const res = await fetch('./assets/version.json?t=' + Date.now(), { cache: 'no-store' });
@@ -3526,27 +3537,43 @@ async function fetchLatestVersion(){
     return (j && j.version) ? String(j.version) : null;
   } catch (e) { return null; }
 }
+/* Records the latest published version. Returns true only when it is a
+   genuine, still-offerable update: strictly newer than this page's stamp
+   (an older or equal stamp is never an "update"), and not a version this
+   page already hard-reloaded for once. */
+function noteLatestVersion(v){
+  latestVersion = v;
+  if (v && v > BLIP_VERSION && v !== chasedVersion) { updateAvailable = true; return true; }
+  return false;
+}
 async function checkForUpdate(){
   const v = await fetchLatestVersion();
-  if (v && v !== BLIP_VERSION) {
-    updateAvailable = true;
-    maybeShowUpdateBanner();
-    syncUpdateRow();
-  }
+  if (v === null) return;
+  if (noteLatestVersion(v)) maybeShowUpdateBanner();
+  syncUpdateRow();
+}
+/* Install the update by navigating to a cache-busting URL: the changed
+   query string is a different cache key, so the browser must fetch the
+   page fresh from the network instead of re-serving the cached copy a
+   plain reload could hand back. ?v= also arms the loop guard above. */
+function hardReloadForUpdate(){
+  if (callState) return;
+  const target = latestVersion || BLIP_VERSION;
+  location.replace(location.pathname + '?v=' + encodeURIComponent(target) + '&t=' + Date.now() + location.hash);
 }
 function maybeShowUpdateBanner(){
   if (!updateAvailable || updateDismissed) return;
   if (callState) return; // never interrupt an active call — shown when it ends
   show($('update-banner'));
 }
-$('btn-update-now').onclick = () => { if (!callState) location.reload(); };
+$('btn-update-now').onclick = () => hardReloadForUpdate();
 $('btn-update-dismiss').onclick = () => { updateDismissed = true; hide($('update-banner')); syncUpdateRow(); };
 /* Manual check from Settings — the way back in after the banner at the top
    has been dismissed. Once an update is known, tapping the row installs it
-   (same reload as the banner's Update button). */
+   (same hard reload as the banner's Update button). */
 async function manualCheckForUpdate(){
   if (updateAvailable) {
-    if (!callState) location.reload();
+    if (!callState) hardReloadForUpdate();
     else toast('Finish your call, then tap to update');
     return;
   }
@@ -3555,8 +3582,7 @@ async function manualCheckForUpdate(){
   const v = await fetchLatestVersion();
   updateChecking = false;
   if (v === null) { updateCheckState = 'error'; toast("Couldn't check — try again"); }
-  else if (v !== BLIP_VERSION) {
-    updateAvailable = true;
+  else if (noteLatestVersion(v)) {
     maybeShowUpdateBanner();
     toast('Update Available — tap Check for Updates to install');
   } else { updateCheckState = 'current'; toast("You're up to date"); }
