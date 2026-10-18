@@ -963,11 +963,6 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
         <div class="set-row" style="cursor:default"><span class="lab">Version</span><span class="set-val" id="setg-version"></span></div>
       </div>
       <p class="set-note" id="setg-hide-camera-note" style="margin-top:10px">Hide camera features is for when your PC reports a virtual camera or capture card — like OBS Virtual Camera or a Switch capture setup — that isn't a real webcam. While it's on, the Camera tab, Add to Story, and photo buttons stay hidden even if a camera is detected. Turn it off to use a real webcam again. Saved on this device.</p>
-      <div class="sec-label" style="padding:22px 2px 0">Safety</div>
-      <div class="set-list" style="margin-top:2px">
-        <button class="set-row" id="setg-safety" type="button" role="switch" aria-checked="true" aria-label="Safety filter"><span class="lab">Safety Filter</span><span class="switch on" id="setg-safety-switch" aria-hidden="true"></span></button>
-      </div>
-      <p class="set-note" style="margin-top:10px">The safety filter checks every photo and video on this device before it sends and blocks anything that looks inappropriate — the check happens on your device, and nothing is uploaded for it. It also bleeps cuss words out of chats, names, and titles with ####, the way Roblox does. Saved on this device.</p>
       <div class="set-list">
         <button class="set-row danger" id="setg-signout"><span class="lab">Log Out</span></button>
       </div>
@@ -1494,9 +1489,8 @@ function toast(msg){
 }
 
 /* ---------- safety: word filter + photo scan ----------
-   Two on-device protections, both on by default and tied to the
-   Safety Filter switch in Settings (stored on this device only —
-   'blip_safety' in localStorage, like the theme and camera flags):
+   Two on-device protections, both built in and always on for
+   everyone — there is no switch and no way to disable them:
 
    1. Bleep: cuss words in anything Blip shows — chat text, names,
       bios, group names, story titles — become #### the way Roblox
@@ -1513,21 +1507,10 @@ function toast(msg){
       blocked CDN), a built-in skin-tone check still runs; if even
       that cannot run, the photo sends rather than breaking the app
       over a safety net that is having a bad day. */
-let safetyFilter = true;
-try { safetyFilter = localStorage.getItem('blip_safety') !== '0'; } catch (e) {}
-function syncSafetyRow(){
-  const btn = $('setg-safety');
-  const sw = $('setg-safety-switch');
-  if (btn) btn.setAttribute('aria-checked', safetyFilter ? 'true' : 'false');
-  if (sw) sw.classList.toggle('on', !!safetyFilter);
-}
-function setSafetyFilter(on){
-  safetyFilter = !!on;
-  try { localStorage.setItem('blip_safety', safetyFilter ? '1' : '0'); } catch (e) {}
-  syncSafetyRow();
-  if (safetyFilter) warmSafetyScanner();
-  toast(safetyFilter ? 'Safety Filter On' : 'Safety Filter Off');
-}
+/* Locked on: the word filter and photo scan below always run.
+   Kept as a constant so the call sites read the same — it can
+   never be false, and no setting or stored flag can change it. */
+const safetyFilter = true;
 
 /* The word list: common profanity and slurs, matched as whole words
    only — "class" and "bass" pass, because the whole token has to be
@@ -1921,7 +1904,6 @@ function wireSettings(){
   $('setg-update').onclick = () => manualCheckForUpdate();
   $('setg-camera').onclick = () => recheckCamera();
   $('setg-hide-camera').onclick = () => setHideCameraFeatures(!hideCameraFeatures);
-  $('setg-safety').onclick = () => setSafetyFilter(!safetyFilter);
   $('setg-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 }
 function openSettings(){
@@ -1935,7 +1917,6 @@ function openSettings(){
   syncInstallRow();
   syncCameraRow();
   syncHideCameraRow();
-  syncSafetyRow();
   renderThemeGrid();
   show($('screen-settings'));
 }
