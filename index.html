@@ -615,6 +615,11 @@ img{display:block}
 .set-acct svg{width:21px;height:21px;color:var(--ink3);flex:none}
 .set-val{color:var(--ink2);font-weight:500;font-size:14.5px;text-align:right}
 .set-val.upd-ready{color:var(--yellow);font-weight:800}
+/* Manual camera override switch (Settings > Hide camera features) */
+.switch{width:50px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .18s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.28);transition:transform .18s}
+.switch.on{background:var(--yellow)}
+.switch.on::after{transform:translateX(20px)}
 
 /* ---------- theme picker ---------- */
 .theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
@@ -693,11 +698,18 @@ img{display:block}
    detection finds no camera on this device at all (.no-camera), every
    piece of camera UI stays away: the bottom bar's raised camera
    button, the camera view itself (shutter and all), the thread's
-   photo button, and the desktop sidebar's Camera item. */
+   photo button, and the desktop sidebar's Camera item. The manual
+   override (.hide-camera, Settings > Hide camera features) hides the
+   exact same UI even when detection does find a camera — for PCs
+   that report a virtual camera or capture card that isn't a webcam. */
 body.no-camera .tab-cam-wrap,
 body.no-camera #view-camera,
 body.no-camera #btn-thread-cam,
 body.no-camera .side-item[data-side="view-camera"],
+body.hide-camera .tab-cam-wrap,
+body.hide-camera #view-camera,
+body.hide-camera #btn-thread-cam,
+body.hide-camera .side-item[data-side="view-camera"],
 body.cam-pending .tab-cam-wrap,
 body.cam-pending #view-camera,
 body.cam-pending #btn-thread-cam,
@@ -947,8 +959,10 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
         <button class="set-row" id="setg-update"><span class="lab">Check for Updates</span><span class="set-val" id="setg-update-val"></span><span data-ico="chev"></span></button>
         <button class="set-row" id="setg-install"><span class="lab">Add to Taskbar</span><span class="set-val" id="setg-install-val">Install Blip</span><span data-ico="chev"></span></button>
         <button class="set-row" id="setg-camera"><span class="lab">Check for Camera</span><span class="set-val" id="setg-camera-val"></span><span data-ico="chev"></span></button>
+        <button class="set-row" id="setg-hide-camera" type="button" role="switch" aria-checked="false" aria-label="Hide camera features"><span class="lab">Hide camera features</span><span class="switch" id="setg-hide-camera-switch" aria-hidden="true"></span></button>
         <div class="set-row" style="cursor:default"><span class="lab">Version</span><span class="set-val" id="setg-version"></span></div>
       </div>
+      <p class="set-note" id="setg-hide-camera-note" style="margin-top:10px">Hide camera features is for when your PC reports a virtual camera or capture card — like OBS Virtual Camera or a Switch capture setup — that isn't a real webcam. While it's on, the Camera tab, Add to Story, and photo buttons stay hidden even if a camera is detected. Turn it off to use a real webcam again. Saved on this device.</p>
       <div class="set-list">
         <button class="set-row danger" id="setg-signout"><span class="lab">Log Out</span></button>
       </div>
@@ -1387,6 +1401,14 @@ let openedMap = {};          // otherId -> ISO timestamp when I last opened that
 let chatThemes = {};         // otherId -> theme id, or 'custom:#rrggbb' (per-chat themes)
 let nameChanged = false;     // one-time display-name change used?
 let camStream = null, facing = 'user';
+/* Manual camera override (Settings > Hide camera features): when ON,
+   every piece of camera UI stays hidden no matter what automatic
+   detection finds. For PCs that report a virtual camera / capture
+   card (OBS Virtual Camera, a Switch capture setup, …) that isn't a
+   real webcam. Persisted on this device only, like the theme. */
+let hideCameraFeatures = false;
+try { hideCameraFeatures = localStorage.getItem('blip_hide_camera') === '1'; } catch (e) {}
+function isCameraHidden(){ return hideCameraFeatures || camPresent === false; }
 /* Set the moment camera access is refused: from then on the app never
    fires another getUserMedia on its own, so the permission prompt can
    appear at most once — only the explicit "Turn On Camera" button may
@@ -1650,8 +1672,9 @@ function wireNav(){
   $('side-settings').onclick = openSettings;
 }
 function switchView(v){
-  // A device with no camera has no camera view to switch to.
-  if (v === 'view-camera' && camPresent === false) { toast('No camera found on this device'); v = 'view-chats'; }
+  // A device with no camera — or with Hide camera features on — has
+  // no camera view to switch to.
+  if (v === 'view-camera' && isCameraHidden()) { toast(hideCameraFeatures ? 'Camera features are hidden — turn off Hide camera features in Settings to use the camera' : 'No camera found on this device'); v = 'view-chats'; }
   activeView = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
   document.querySelectorAll('.side-item[data-side]').forEach(b => b.classList.toggle('active', b.dataset.side === v));
@@ -1708,6 +1731,7 @@ function wireSettings(){
   $('setg-notif').onclick = () => enableNotifications();
   $('setg-update').onclick = () => manualCheckForUpdate();
   $('setg-camera').onclick = () => recheckCamera();
+  $('setg-hide-camera').onclick = () => setHideCameraFeatures(!hideCameraFeatures);
   $('setg-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 }
 function openSettings(){
@@ -1720,6 +1744,7 @@ function openSettings(){
   syncUpdateRow();
   syncInstallRow();
   syncCameraRow();
+  syncHideCameraRow();
   renderThemeGrid();
   show($('screen-settings'));
 }
@@ -3712,30 +3737,57 @@ async function recheckCamera(){
   applyCameraAvailability();
   syncCameraRow();
   loadStories();
-  toast(has ? 'Camera Found' : 'No Camera Found on This Device');
+  if (hideCameraFeatures) toast(has ? 'Camera Found — still hidden by Hide camera features' : 'No Camera Found on This Device');
+  else toast(has ? 'Camera Found' : 'No Camera Found on This Device');
 }
 function syncCameraRow(){
   const el = $('setg-camera-val');
   if (!el) return;
   el.textContent = camPresent === null ? '' : (camPresent ? 'Found' : 'None Found');
 }
+function syncHideCameraRow(){
+  const btn = $('setg-hide-camera');
+  const sw = $('setg-hide-camera-switch');
+  if (btn) btn.setAttribute('aria-checked', hideCameraFeatures ? 'true' : 'false');
+  if (sw) sw.classList.toggle('on', !!hideCameraFeatures);
+}
+function setHideCameraFeatures(on){
+  hideCameraFeatures = !!on;
+  try { localStorage.setItem('blip_hide_camera', hideCameraFeatures ? '1' : '0'); } catch (e) {}
+  syncHideCameraRow();
+  if (hideCameraFeatures) {
+    // Hide right away: stop painting the preview and leave the
+    // camera view if it's open — the CSS hides the view itself.
+    pauseCamera();
+    if (activeView === 'view-camera') switchView('view-chats');
+  }
+  applyCameraAvailability();
+  if (typeof loadStories === 'function' && me && sb) { try { loadStories(); } catch (e) {} }
+  toast(hideCameraFeatures ? 'Camera Features Hidden' : 'Camera Features Shown');
+}
 async function deviceHasCamera(){
+  if (hideCameraFeatures) return false;
   if (camPresent !== null) return camPresent;
   return detectCameraPresence();
 }
 function applyCameraAvailability(){
   // The check has resolved: lift the pending state, then keep the
-  // camera UI hidden for good if this device has no camera.
+  // camera UI hidden for good if this device has no camera — or if
+  // the user turned on Hide camera features, regardless of what
+  // detection found.
   document.body.classList.remove('cam-pending');
-  document.body.classList.toggle('no-camera', camPresent === false);
-  if (camPresent === false && activeView === 'view-camera') switchView('view-chats');
+  const hidden = isCameraHidden();
+  document.body.classList.toggle('no-camera', hidden);
+  document.body.classList.toggle('hide-camera', !!hideCameraFeatures);
+  syncHideCameraRow();
+  if (hidden && activeView === 'view-camera') switchView('view-chats');
 }
 /* The camera view's off state has two faces: "Camera Is Off" (there
    is a camera, it is just not running — with the Turn On button) and
    "No camera found on this device" (no camera exists at all, so no
    button: there is nothing to turn on and nothing to ask about). */
 function showCamOffState(){
-  if (camPresent === false) { hide($('cam-off')); show($('cam-nocam')); }
+  if (isCameraHidden()) { hide($('cam-off')); show($('cam-nocam')); }
   else { hide($('cam-nocam')); show($('cam-off')); }
 }
 function hideCamOffState(){ hide($('cam-off')); hide($('cam-nocam')); }
@@ -4809,11 +4861,11 @@ async function loadStories(){
   // My Story strip
   const strip = $('my-story-strip'); strip.innerHTML = '';
   const mine = byUser.get(me.id);
-  // With no camera on this device there is no way to create a story,
-  // so the "Add to Story" chip is not offered at all. A user who
-  // already has stories keeps the "My Story" chip — viewing your own
-  // stories never needed a camera.
-  if (mine || camPresent !== false) {
+  // With no camera on this device — or with Hide camera features on —
+  // there is no way to create a story, so the "Add to Story" chip is
+  // not offered at all. A user who already has stories keeps the
+  // "My Story" chip — viewing your own stories never needed a camera.
+  if (mine || !isCameraHidden()) {
     const chip = document.createElement('div');
     chip.className = 'story-chip';
     chip.innerHTML = '<div class="ring-wrap"><div class="ring ' + (mine ? 'purple' : 'yellow') + '"><div class="ring-inner">' + avatarHTML(me, 'md') + '</div></div>' +
@@ -5072,7 +5124,7 @@ function makePC(otherId){
    which is safe on a shared track. */
 async function acquireCallStream(wantVideo){
   let sharedVideo = null;
-  if (wantVideo && camStream) {
+  if (wantVideo && !hideCameraFeatures && camStream) {
     const vt = camStream.getVideoTracks()[0];
     if (vt && vt.readyState === 'live') sharedVideo = vt;
   }
