@@ -545,6 +545,16 @@ img{display:block}
 .sheet{background:var(--sheet);width:100%;border-radius:22px 22px 0 0;padding:14px 18px calc(18px + env(safe-area-inset-bottom));animation:sheetUp .3s var(--ease);max-height:88%;display:flex;flex-direction:column}
 @keyframes sheetUp{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
 .sheet .grab{width:38px;height:5px;border-radius:99px;background:#dcdce2;margin:0 auto 12px;flex:none}
+/* Swipe-down-to-dismiss: the grab handle and title are the drag zone.
+   While dragging the sheet follows the pointer with no transition;
+   on release it settles (springs back, or slides the rest of the way
+   out) under the .settling transition. */
+.sheet .grab,.sheet h3{touch-action:none;cursor:grab}
+.sheet.dragging{animation:none;transition:none;will-change:transform}
+.sheet.settling{transition:transform .3s var(--ease)}
+#sticker-panel .sticker-head{touch-action:none;cursor:grab}
+#sticker-panel.dragging{transition:none;will-change:transform}
+#sticker-panel.settling{transition:transform .3s var(--ease)}
 .sheet h3{margin:2px 0 12px;font-size:19px;font-weight:800;text-align:center}
 .sheet .scroll{overflow-y:auto}
 .sheet .scroll::-webkit-scrollbar{display:none}
@@ -1480,7 +1490,7 @@ async function init(){
   // actually present. enumerateDevices() never prompts.
   await detectCameraPresence();
   wireAuth(); wireNav(); wireProfile(); wireSettings(); wireFriends(); wireCamera(); wireChat(); wireStories(); wireSendSheet(); wireCalls(); wireEditor(); wireCropper();
-  wireVoice(); wireStickers(); wireChatTheme(); wireGroups(); wireInstall();
+  wireVoice(); wireStickers(); wireChatTheme(); wireGroups(); wireInstall(); wireSheetDrag();
   // The service worker asks us to re-subscribe when the push service rotates
   // our subscription ('pushsubscriptionchange').
   if ('serviceWorker' in navigator) {
@@ -4602,6 +4612,98 @@ function compositeVideo(es){
     if (v.readyState >= 3) go();
     else v.addEventListener('canplay', go, { once: true });
   });
+}
+
+/* ---------- swipe down to dismiss ----------
+   Every bottom sheet (the panels topped with the little grab handle)
+   can be dragged down by its handle or title: the sheet follows the
+   finger, and letting go past the threshold — or with a quick
+   downward flick — closes it through the same path a backdrop tap
+   uses, so each sheet's own close cleanup (stopping the send preview,
+   clearing a pending confirm, and so on) still runs. Letting go early
+   springs the sheet back open. Cancel buttons and backdrop taps are
+   untouched. The sticker picker is a bottom panel rather than a
+   sheet, but its header drags down to close it the same way. */
+function wireSheetDrag(){
+  document.querySelectorAll('.overlay > .sheet').forEach((sheet) => {
+    const overlay = sheet.parentElement;
+    makeDragDismiss(sheet, sheet.querySelectorAll('.grab, h3'), () => {
+      // A synthetic backdrop click: every sheet already closes (with
+      // its own cleanup) when the click target is the overlay itself.
+      overlay.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+  });
+  const panel = $('sticker-panel');
+  if (panel) makeDragDismiss(panel, panel.querySelectorAll('.sticker-head'), closeStickerPanel);
+}
+function makeDragDismiss(el, handles, onClose){
+  if (!el || !handles.length) return;
+  let pid = null, startY = 0, dy = 0, samples = [];
+  function onDown(e){
+    if (pid !== null) return;
+    pid = e.pointerId;
+    startY = e.clientY; dy = 0;
+    samples = [{ y: e.clientY, t: performance.now() }];
+    el.classList.add('dragging'); el.classList.remove('settling');
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+  function onMove(e){
+    if (e.pointerId !== pid) return;
+    dy = e.clientY - startY;
+    const now = performance.now();
+    samples.push({ y: e.clientY, t: now });
+    while (samples.length > 2 && now - samples[0].t > 120) samples.shift();
+    // Down moves the sheet with the finger; up gets a little resistance.
+    el.style.transform = 'translateY(' + (dy > 0 ? dy : dy * 0.25) + 'px)';
+    if (dy > 6 && e.cancelable) e.preventDefault();
+  }
+  function onUp(e){
+    if (e.pointerId !== pid) return;
+    pid = null;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    el.classList.remove('dragging');
+    // Release velocity over the last ~120ms: a drag that ends in a
+    // quick downward flick dismisses even short of the threshold,
+    // while one that slows to a stop first springs back.
+    const now = performance.now();
+    samples.push({ y: e.clientY, t: now });
+    while (samples.length > 2 && now - samples[0].t > 120) samples.shift();
+    let vel = 0;
+    if (samples.length > 1) {
+      const first = samples[0], last = samples[samples.length - 1];
+      if (last.t > first.t) vel = (last.y - first.y) / (last.t - first.t);
+    }
+    const h = el.offsetHeight || 300;
+    const dismiss = dy > Math.min(110, h * 0.5) || (dy > 24 && vel > 0.5);
+    el.classList.add('settling');
+    if (dismiss) {
+      el.style.transform = 'translateY(' + (h + 40) + 'px)';
+      let done = false;
+      const finish = () => {
+        if (done) return; done = true;
+        el.classList.remove('settling'); el.style.transform = '';
+        onClose();
+      };
+      el.addEventListener('transitionend', function te(ev){ if (ev.propertyName === 'transform') { el.removeEventListener('transitionend', te); finish(); } });
+      setTimeout(finish, 360); // fallback if the transition is cut short
+    } else {
+      el.style.transform = '';
+      setTimeout(() => el.classList.remove('settling'), 320);
+      // A real drag shouldn't also fire the handle's tap action (the
+      // group title renames on tap, for instance) — swallow one click.
+      if (Math.abs(dy) > 6) {
+        const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+        el.addEventListener('click', swallow, { capture: true, once: true });
+        setTimeout(() => el.removeEventListener('click', swallow, { capture: true }), 400);
+      }
+    }
+    dy = 0;
+  }
+  handles.forEach((hd) => hd.addEventListener('pointerdown', onDown));
 }
 
 /* ---------- send sheet ---------- */
