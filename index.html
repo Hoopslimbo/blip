@@ -963,6 +963,11 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
         <div class="set-row" style="cursor:default"><span class="lab">Version</span><span class="set-val" id="setg-version"></span></div>
       </div>
       <p class="set-note" id="setg-hide-camera-note" style="margin-top:10px">Hide camera features is for when your PC reports a virtual camera or capture card — like OBS Virtual Camera or a Switch capture setup — that isn't a real webcam. While it's on, the Camera tab, Add to Story, and photo buttons stay hidden even if a camera is detected. Turn it off to use a real webcam again. Saved on this device.</p>
+      <div class="sec-label" style="padding:22px 2px 0">Safety</div>
+      <div class="set-list" style="margin-top:2px">
+        <button class="set-row" id="setg-safety" type="button" role="switch" aria-checked="true" aria-label="Safety filter"><span class="lab">Safety Filter</span><span class="switch on" id="setg-safety-switch" aria-hidden="true"></span></button>
+      </div>
+      <p class="set-note" style="margin-top:10px">The safety filter checks every photo and video on this device before it sends and blocks anything that looks inappropriate — the check happens on your device, and nothing is uploaded for it. It also bleeps cuss words out of chats, names, and titles with ####, the way Roblox does. Saved on this device.</p>
       <div class="set-list">
         <button class="set-row danger" id="setg-signout"><span class="lab">Log Out</span></button>
       </div>
@@ -1487,6 +1492,189 @@ function toast(msg){
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
+
+/* ---------- safety: word filter + photo scan ----------
+   Two on-device protections, both on by default and tied to the
+   Safety Filter switch in Settings (stored on this device only —
+   'blip_safety' in localStorage, like the theme and camera flags):
+
+   1. Bleep: cuss words in anything Blip shows — chat text, names,
+      bios, group names, story titles — become #### the way Roblox
+      does it. Outgoing text is bleeped before it is saved, and
+      incoming text is bleeped again as it renders, so messages sent
+      from older versions of the app are covered too.
+
+   2. Photo scan: every photo (and a video's cover frame) is checked
+      on this device by NSFWJS, a small TensorFlow.js model that
+      loads once from a CDN — the same way the Supabase library is
+      loaded — before anything uploads. Nothing is sent anywhere for
+      the check; a photo the model is confident is pornographic
+      never leaves the device. If the model cannot load (offline,
+      blocked CDN), a built-in skin-tone check still runs; if even
+      that cannot run, the photo sends rather than breaking the app
+      over a safety net that is having a bad day. */
+let safetyFilter = true;
+try { safetyFilter = localStorage.getItem('blip_safety') !== '0'; } catch (e) {}
+function syncSafetyRow(){
+  const btn = $('setg-safety');
+  const sw = $('setg-safety-switch');
+  if (btn) btn.setAttribute('aria-checked', safetyFilter ? 'true' : 'false');
+  if (sw) sw.classList.toggle('on', !!safetyFilter);
+}
+function setSafetyFilter(on){
+  safetyFilter = !!on;
+  try { localStorage.setItem('blip_safety', safetyFilter ? '1' : '0'); } catch (e) {}
+  syncSafetyRow();
+  if (safetyFilter) warmSafetyScanner();
+  toast(safetyFilter ? 'Safety Filter On' : 'Safety Filter Off');
+}
+
+/* The word list: common profanity and slurs, matched as whole words
+   only — "class" and "bass" pass, because the whole token has to be
+   the word. A match becomes one # per character, so the sentence
+   still reads the way it was written. */
+const BLEEP_SET = new Set(('fuck fucks fucked fucker fuckers fucking motherfucker motherfuckers ' +
+  'shit shits shitty shitting bullshit horseshit bitch bitches bitchy ' +
+  'ass asses asshole assholes dumbass jackass smartass bastard bastards ' +
+  'damn dammit damned goddamn dick dicks dickhead cock cocks pussy pussies cunt cunts ' +
+  'whore whores slut sluts slutty nigger niggers nigga niggas faggot faggots fag fags ' +
+  'retard retards retarded porn porno penis penises vagina boob boobs tit tits titty ' +
+  'nude nudes nudity anal blowjob blowjobs handjob handjobs cum cums cumming jizz ' +
+  'dildo dildos masturbate masturbates masturbating masturbation horny orgasm orgasms ' +
+  'erection boner boners rape rapes rapist rapists kys stfu piss pissed wank wanker twat prick pricks').split(' '));
+const BLEEP_LEET = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's', '!': 'i' };
+/* One token, disguises undone: leetspeak swaps (sh1t, 4ss, b1tch),
+   separators between letters (f.u.c.k — non-letters are stripped),
+   and repeated letters (fuuuck — squeezed to one of each). */
+function bleepWord(w){
+  let norm = '';
+  const lw = String(w).toLowerCase();
+  for (const ch of lw) norm += BLEEP_LEET[ch] || ch;
+  norm = norm.replace(/[^a-z]/g, '');
+  if (!norm) return w;
+  const squeezed = norm.replace(/(.)\1+/g, '$1');
+  if (BLEEP_SET.has(norm) || BLEEP_SET.has(squeezed)) return '#'.repeat(w.length);
+  return w;
+}
+function bleep(s){
+  if (s == null) return s;
+  const str = String(s);
+  if (!safetyFilter) return str;
+  return str.replace(/[A-Za-z0-9@$!._*\-+]+/g, (tok) => bleepWord(tok));
+}
+
+/* ---------- photo scan (NSFWJS, on-device) ---------- */
+const BLOCKED_PHOTO_MSG = "That photo looks inappropriate, so it wasn't sent. Blip checks photos on your device before they send.";
+const BLOCKED_VIDEO_MSG = "That video looks inappropriate, so it wasn't sent. Blip checks videos on your device before they send.";
+let safetyModel = null;        // the loaded NSFWJS model
+let safetyModelState = 'idle'; // idle | loading | ready | failed
+function loadScriptTag(src){
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+async function ensureSafetyModel(){
+  if (safetyModel) return safetyModel;
+  if (safetyModelState === 'failed') return null;
+  if (safetyModelState === 'loading') {
+    for (let i = 0; i < 120 && safetyModelState === 'loading'; i++) await wait(150);
+    return safetyModel;
+  }
+  safetyModelState = 'loading';
+  try {
+    if (!window.nsfwjs) {
+      // The browser bundle carries TensorFlow.js and the model
+      // itself — one file, no second download for the weights.
+      const ok = await loadScriptTag('https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/dist/browser/nsfwjs.min.js');
+      if (!ok || !window.nsfwjs) throw new Error('scanner library failed to load');
+    }
+    safetyModel = await window.nsfwjs.load();
+    safetyModelState = 'ready';
+  } catch (e) {
+    safetyModelState = 'failed';
+    safetyModel = null;
+  }
+  return safetyModel;
+}
+/* Start the model download in the background once the app is open,
+   so the first photo a user sends is not the one paying for it. */
+function warmSafetyScanner(){
+  if (!safetyFilter) return;
+  const kick = () => { ensureSafetyModel(); };
+  if ('requestIdleCallback' in window) requestIdleCallback(kick, { timeout: 4000 });
+  else setTimeout(kick, 2500);
+}
+/* Fallback check, used only when the AI model cannot load: the
+   share of skin-coloured pixels in the frame (the classic YCbCr
+   skin range from before on-device AI). Only an extreme result
+   blocks — close-up faces and beach photos stay well under it. */
+function skinRatio(canvas){
+  const ctx = canvas.getContext('2d');
+  let data;
+  try { data = ctx.getImageData(0, 0, canvas.width, canvas.height).data; }
+  catch (e) { return 0; }
+  let skin = 0, total = 0;
+  for (let i = 0; i < data.length; i += 16) { // every 4th pixel is plenty
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    if (r < 40 && g < 40 && b < 40) continue;     // near-black: not skin
+    if (r > 245 && g > 245 && b > 245) continue;  // near-white: not skin
+    const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    total++;
+    if (cb >= 77 && cb <= 135 && cr >= 130 && cr <= 178 && r > g && g > b && (r - b) > 25) skin++;
+  }
+  return total ? skin / total : 0;
+}
+/* True when the image must NOT be sent. The source can be a canvas,
+   an <img>, a <video>, or an ImageBitmap — anything drawImage
+   takes. Never throws: a scan that cannot run at all lets the
+   photo through instead of breaking sending. */
+async function scanPhotoBlocked(source){
+  if (!safetyFilter || !source) return false;
+  try {
+    const model = await ensureSafetyModel();
+    if (model) {
+      try {
+        const preds = await model.classify(source, 5);
+        const p = {};
+        (preds || []).forEach(x => { p[x.className] = x.probability; });
+        if ((p.Porn || 0) >= 0.55 || (p.Hentai || 0) >= 0.55) return true;
+        if ((p.Sexy || 0) >= 0.9 && ((p.Porn || 0) + (p.Hentai || 0)) >= 0.05) return true;
+        return false;
+      } catch (e) { /* the model choked on this image — skin check below still runs */ }
+    }
+    const w = source.videoWidth || source.naturalWidth || source.width || 0;
+    const h = source.videoHeight || source.naturalHeight || source.height || 0;
+    if (!w || !h) return false;
+    const c = document.createElement('canvas');
+    c.width = 96; c.height = Math.max(1, Math.round(96 * h / w));
+    c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
+    return skinRatio(c) >= 0.62;
+  } catch (e) { return false; }
+}
+/* The same check for an image still sitting in a Blob (profile
+   photos and stickers go through the cropper as blobs). */
+async function scanBlobBlocked(blob){
+  if (!safetyFilter || !blob) return false;
+  try {
+    if (typeof createImageBitmap === 'function') {
+      const bmp = await createImageBitmap(blob);
+      try { return await scanPhotoBlocked(bmp); }
+      finally { if (bmp.close) bmp.close(); }
+    }
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      return await scanPhotoBlocked(img);
+    } finally { URL.revokeObjectURL(url); }
+  } catch (e) { return false; }
+}
+
 function loadLocal(){
   try {
     const raw = localStorage.getItem('blip_local_' + (me ? me.id : 'anon'));
@@ -1616,7 +1804,7 @@ async function doAuth(e){
       if (error) throw error;
       const user = data.user;
       if (!data.session) { $('auth-error').textContent = 'Check your email to confirm, then Log In.'; return; }
-      const { error: pErr } = await sb.from('blip_profiles').insert({ id: user.id, username, display_name: rawName });
+      const { error: pErr } = await sb.from('blip_profiles').insert({ id: user.id, username, display_name: bleep(rawName) });
       if (pErr) { if (pErr.code === '23505') throw new Error('That name is taken.'); throw pErr; }
       await enterApp(user);
     } else {
@@ -1633,6 +1821,7 @@ async function enterApp(user){
   me = { ...prof, email: user.email };
   profilesCache[me.id] = prof;
   loadLocal();
+  warmSafetyScanner();
   refreshMyAvatars();
   hide($('screen-splash')); hide($('screen-auth')); show($('screen-main'));
   // Land on Chats — the app opens to the chat list, never the camera,
@@ -1732,6 +1921,7 @@ function wireSettings(){
   $('setg-update').onclick = () => manualCheckForUpdate();
   $('setg-camera').onclick = () => recheckCamera();
   $('setg-hide-camera').onclick = () => setHideCameraFeatures(!hideCameraFeatures);
+  $('setg-safety').onclick = () => setSafetyFilter(!safetyFilter);
   $('setg-signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 }
 function openSettings(){
@@ -1745,6 +1935,7 @@ function openSettings(){
   syncInstallRow();
   syncCameraRow();
   syncHideCameraRow();
+  syncSafetyRow();
   renderThemeGrid();
   show($('screen-settings'));
 }
@@ -1805,6 +1996,7 @@ function renderThemeGrid(){
    then the framed region is rendered to a JPEG, uploaded to blip-media,
    and its URL saved on blip_profiles (avatar_url / banner_url). */
 async function saveProfileImage(blob, kind){
+  if (await scanBlobBlocked(blob)) { toast("That photo looks inappropriate — pick a different one."); return false; }
   const path = me.id + '/' + kind + '-' + Date.now() + '.jpg';
   const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
   if (error) { toast('Upload failed: ' + error.message); return false; }
@@ -2015,7 +2207,7 @@ async function saveEditProfile(){
   const patch = {};
   if (!nameChanged && newName !== (me.display_name || '')) {
     if (newName.length < 2) { errEl.textContent = 'Display name is too short.'; return; }
-    patch.display_name = newName;
+    patch.display_name = bleep(newName);
   }
   if (newUser !== (me.username || '')) {
     if (!/^[a-z0-9_]{3,30}$/.test(newUser)) {
@@ -2024,7 +2216,7 @@ async function saveEditProfile(){
     }
     patch.username = newUser;
   }
-  if (newBio !== (me.bio || '')) patch.bio = newBio || null;
+  if (newBio !== (me.bio || '')) patch.bio = bleep(newBio) || null;
   if (!Object.keys(patch).length) { hide($('sheet-edit')); return; }
   $('btn-edit-save').disabled = true;
   const { error } = await sb.from('blip_profiles').update(patch).eq('id', me.id);
@@ -2117,8 +2309,8 @@ function personRow(p){
   r.className = 'chat-row';
   r.style.paddingLeft = '2px'; r.style.paddingRight = '2px';
   r.innerHTML = avatarHTML(p, 'md') +
-    '<div class="row-main"><div class="row-name">' + esc(p.display_name) + '</div>' +
-    '<div class="row-status"><span class="st-plain">@' + esc(p.username) + '</span></div></div>';
+    '<div class="row-main"><div class="row-name">' + esc(bleep(p.display_name)) + '</div>' +
+    '<div class="row-status"><span class="st-plain">@' + esc(bleep(p.username)) + '</span></div></div>';
   return r;
 }
 function renderFriendList(){
@@ -2227,7 +2419,13 @@ async function fetchProfiles(ids){
   const missing = ids.filter(id => !profilesCache[id]);
   if (!missing.length) return;
   const { data } = await sb.from('blip_profiles').select('*').in('id', missing);
-  (data || []).forEach(p => profilesCache[p.id] = p);
+  (data || []).forEach(p => {
+    // Other people's names and bios are bleeped once, here, so every
+    // screen that renders a cached profile (chat list, threads,
+    // stories, friend lists) shows the filtered version. Your own
+    // profile row is stored separately in enterApp and stays as-is.
+    profilesCache[p.id] = { ...p, display_name: bleep(p.display_name), bio: bleep(p.bio) };
+  });
 }
 function statusFor(m, otherId){
   const opened = openedMap[otherId];
@@ -2277,7 +2475,7 @@ async function loadChats(){
     if (it.kind === 'dm') {
       const t = { other: it.other, last: it.last };
       const m = t.last, st = statusFor(m, t.other.id);
-      const snippet = m.image_url ? (isVoiceUrl(m.image_url) ? ' · Voice Message' : '') : ' · ' + esc((m.body || '').slice(0, 42));
+      const snippet = m.image_url ? (isVoiceUrl(m.image_url) ? ' · Voice Message' : '') : ' · ' + esc(bleep((m.body || '').slice(0, 42)));
       r.innerHTML = '<span class="chat-av">' + avatarHTML(t.other, 'md') + '</span>' +
         '<div class="row-main"><div class="row-name' + (st.unread ? ' unread' : '') + '">' + esc(t.other.display_name) + '</div>' +
         '<div class="row-status"><span class="dot" style="background:' + st.dot + '"></span><span class="' + st.cls + '">' + st.label + '</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500">' + snippet + '</span></div></div>' +
@@ -2293,7 +2491,7 @@ async function loadChats(){
         unread = m.sender_id !== me.id && (!opened || new Date(m.created_at) > new Date(opened));
         const sp = profilesCache[m.sender_id];
         const who = m.sender_id === me.id ? 'You' : ((sp && sp.display_name) || 'Member');
-        const snip = m.image_url ? (isVoiceUrl(m.image_url) ? 'Voice Message' : 'Photo') : esc((m.body || '').slice(0, 34));
+        const snip = m.image_url ? (isVoiceUrl(m.image_url) ? 'Voice Message' : 'Photo') : esc(bleep((m.body || '').slice(0, 34)));
         statusHTML = '<span class="dot" style="background:var(--chat)"></span><span class="st-chat">' + cnt + ' Members</span><span class="sep">·</span><span class="st-dim">' + relTime(m.created_at) + '</span><span class="st-plain" style="font-weight:500"> · ' + esc(who) + ': ' + snip + '</span>';
       } else {
         statusHTML = '<span class="dot" style="background:#c6ccd4"></span><span class="st-plain">' + cnt + ' Members</span><span class="sep">·</span><span class="st-dim">New Group</span>';
@@ -2330,7 +2528,7 @@ async function loadMyGroups(){
   const { data: mem } = await sb.from('blip_group_members').select('group_id,user_id').in('group_id', ids);
   (mem || []).forEach(r => { (groupMembersCache[r.group_id] = groupMembersCache[r.group_id] || []).push(r.user_id); });
   if (mem && mem.length) await fetchProfiles([...new Set(mem.map(r => r.user_id))]);
-  myGroups = (gs || []).map(g => ({ ...g, members: groupMembersCache[g.id] || [] }));
+  myGroups = (gs || []).map(g => ({ ...g, name: bleep(g.name), members: groupMembersCache[g.id] || [] }));
 }
 async function openGroupThread(g){
   threadOther = null;
@@ -2422,7 +2620,7 @@ function syncCreateGroupBtn(){
   b.style.opacity = ready ? '1' : '.5';
 }
 async function createGroup(){
-  const name = $('group-name').value.trim();
+  const name = bleep($('group-name').value.trim());
   if (!name) { $('group-error').textContent = 'Give your group a name.'; return; }
   if (!newGroupSel.size) { $('group-error').textContent = 'Pick at least one friend to add.'; return; }
   const btn = $('btn-group-create');
@@ -2503,7 +2701,7 @@ function openRenameGroup(){
   setTimeout(() => $('rename-group-input').focus(), 60);
 }
 async function saveRenameGroup(){
-  const name = $('rename-group-input').value.trim();
+  const name = bleep($('rename-group-input').value.trim());
   if (!threadGroup || !name) return;
   const { error } = await sb.from('blip_groups').update({ name }).eq('id', threadGroup.id);
   if (error) { $('rename-error').textContent = error.message; return; }
@@ -2533,7 +2731,7 @@ function wireChat(){
   });
   $('thread-form').onsubmit = async (e) => {
     e.preventDefault();
-    const t = $('thread-text').value.trim();
+    const t = bleep($('thread-text').value.trim());
     if (!t || (!threadOther && !threadGroup)) return;
     $('thread-text').value = '';
     const rt = replyTo;
@@ -2676,7 +2874,7 @@ function bubble(m, gap){
   }
   if (m.body) {
     const b = document.createElement('div');
-    b.className = 'bubble'; b.textContent = m.body;
+    b.className = 'bubble'; b.textContent = bleep(m.body);
     wireMessageGestures(b, m, null);
     row.appendChild(b);
   }
@@ -2693,7 +2891,7 @@ function bubble(m, gap){
    reply bar, and desktop notifications. */
 function msgSnippet(m){
   if (!m) return 'Message';
-  if (m.body) return m.body;
+  if (m.body) return bleep(m.body);
   if (m.image_url) {
     if (isVoiceUrl(m.image_url)) return 'Voice message';
     if (isVideoUrl(m.image_url)) return 'Video';
@@ -2807,7 +3005,7 @@ function startEditMessage(m){
   const save = document.createElement('button');
   save.type = 'button'; save.className = 'save'; save.textContent = 'Save';
   save.onclick = async () => {
-    const v = ta.value.trim();
+    const v = bleep(ta.value.trim());
     if (!v) { toast('Message cannot be empty'); return; }
     save.disabled = true;
     const stamp = new Date().toISOString();
@@ -3212,6 +3410,7 @@ async function deleteSticker(st){
   toast('Sticker Deleted');
 }
 async function saveStickerImage(blob){
+  if (await scanBlobBlocked(blob)) { toast("That photo looks inappropriate, so the sticker wasn't saved."); return false; }
   const path = me.id + '/stickers/' + Date.now() + '.jpg';
   const { error } = await sb.storage.from('blip-media').upload(path, blob, { contentType: 'image/jpeg' });
   if (error) { toast('Upload failed: ' + error.message); return false; }
@@ -4580,6 +4779,10 @@ async function finishEditor(){
   closeEditor();
   const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.85));
   if (!blob) { toast('Could not save photo'); return; }
+  // The safety scan runs on the finished photo (edits baked in)
+  // before a single byte uploads; a blocked photo goes nowhere.
+  toast('Checking Photo…');
+  if (await scanPhotoBlocked(out)) { toast(BLOCKED_PHOTO_MSG); return; }
   toast('Uploading Photo…');
   const url = await uploadImage(blob);
   if (url) openSendSheet(url);
@@ -4592,6 +4795,17 @@ async function finishEditor(){
    the clip's own audio track when the browser will hand it over). */
 async function finishVideoEditor(){
   const es = editState; if (!es) return;
+  // One frame stands in for the clip: the frame the editor is
+  // showing gets the same on-device check photos get, before the
+  // upload (or the longer edits-baking pass) starts.
+  const vEl = $('edit-video');
+  if (vEl && vEl.videoWidth) {
+    toast('Checking Video…');
+    const fc = document.createElement('canvas');
+    fc.width = vEl.videoWidth; fc.height = vEl.videoHeight;
+    fc.getContext('2d').drawImage(vEl, 0, 0);
+    if (await scanPhotoBlocked(fc)) { toast(BLOCKED_VIDEO_MSG); return; }
+  }
   let blob = es.blob;
   const hasEdits = es.strokes.length > 0 || es.texts.some(t => t.text);
   if (hasEdits) {
@@ -4816,7 +5030,7 @@ async function openSendSheet(imageUrl){
   $('btn-send-story').onclick = async () => {
     stopSendPreview();
     hide($('sheet-send'));
-    const title = $('send-title').value.trim();
+    const title = bleep($('send-title').value.trim());
     const payload = {
       user_id: me.id, image_url: imageUrl,
       expires_at: new Date(Date.now() + 864e5).toISOString()
@@ -4945,7 +5159,7 @@ function renderStorySeg(){
   $('btn-story-del').classList.toggle('hidden', who.id !== me.id);
   $('story-reply-bar').classList.toggle('hidden', who.id === me.id);
   const sTitle = s.title || s.caption || '';
-  $('story-title').textContent = sTitle;
+  $('story-title').textContent = bleep(sTitle);
   $('story-title').classList.toggle('hidden', !sTitle);
   const prog = $('story-progress'); prog.innerHTML = '';
   items.forEach((_, i) => {
@@ -5511,7 +5725,7 @@ async function doInstall(){
 }
 
 /* ---------- in-app updates (embedded stamp vs assets/version.json) ---------- */
-const BLIP_VERSION = '2026.10.17.2345';
+const BLIP_VERSION = '2026.10.18.0155';
 let updateAvailable = false;
 let updateDismissed = false;
 let updateChecking = false;
