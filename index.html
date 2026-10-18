@@ -587,7 +587,6 @@ img{display:block}
 .profile-av-overlap{margin-top:-52px;position:relative;z-index:2}
 .profile-name{font-size:25px;font-weight:800;margin:14px 0 2px;text-align:center}
 .profile-user{color:var(--ink2);font-size:15px;font-weight:600}
-.profile-email{color:var(--ink3);font-size:13.5px;margin-top:4px}
 #btn-edit-profile{margin-top:22px}
 #btn-user-edit{margin-top:22px}
 .edit-banner{position:relative;width:100%;height:118px;border-radius:16px;overflow:hidden;background:var(--yellow);cursor:pointer;flex:none}
@@ -910,7 +909,6 @@ body.cam-pending .side-item[data-side="view-camera"]{display:none!important}
         <div class="profile-name" id="profile-name"></div>
         <div class="profile-user" id="profile-username"></div>
         <div class="profile-bio hidden" id="profile-bio"></div>
-        <div class="profile-email" id="profile-email"></div>
         <button class="btn-block btn-yellow2" id="btn-edit-profile">Edit Profile</button>
         <div class="set-list">
           <button class="set-row" id="set-add"><span class="lab">Friends</span><span data-ico="chev"></span></button>
@@ -1696,7 +1694,6 @@ function openProfile(){
   const bioEl = $('profile-bio');
   bioEl.textContent = me.bio || '';
   bioEl.classList.toggle('hidden', !me.bio);
-  $('profile-email').textContent = me.email || '';
   updateNotifRow();
   show($('screen-profile'));
 }
